@@ -124,6 +124,8 @@ textarea.notes:focus{border-color:var(--accent)}
 .next-btn:disabled{opacity:.35;cursor:default}
 .back-btn{width:100%;padding:11px;margin-top:7px;background:none;color:var(--text2);border:1px solid var(--border);border-radius:11px;font:600 13px/1 'Heebo',sans-serif;cursor:pointer}
 </style>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
@@ -164,7 +166,7 @@ textarea.notes:focus{border-color:var(--accent)}
 </div>
 </div>
 
-<script type="module">
+<script>
 const ITEMS=[
   // רחפני משימה — ממויין בסדר עולה
   {id:'M-31',cat:'רחפני משימה'},{id:'M-1308',cat:'רחפני משימה'},{id:'M-1396',cat:'רחפני משימה'},
@@ -249,56 +251,56 @@ const ITEMS=[
 const PEOPLE=['מטיס 1','מטיס 2','מטיס 3','לוס','מטווח 8'];
 const KEY='uav3_v1';
 let db={items:{},log:[]};
+let firebaseReady=false;
+let fbDatabase=null, fbRef=null, fbSet=null, fbOnValue=null;
 
-// ── FIREBASE ──
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyDsQuwBYUEvhdHXS3xKGhnkg__ShMbJ_bQ",
-  authDomain: "equitment-tracker.firebaseapp.com",
-  databaseURL: "https://equitment-tracker-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "equitment-tracker",
-  storageBucket: "equitment-tracker.firebasestorage.app",
-  messagingSenderId: "399917650732",
-  appId: "1:399917650732:web:65953e3593de342b181289"
-};
-
-const firebaseApp = initializeApp(firebaseConfig);
-const firebaseDb = getDatabase(firebaseApp);
-const dbRef = ref(firebaseDb, 'tracker');
-
-let firebaseReady = false;
+function initFirebase(){
+  try{
+    const app=firebase.initializeApp({
+      apiKey:"AIzaSyDsQuwBYUEvhdHXS3xKGhnkg__ShMbJ_bQ",
+      authDomain:"equitment-tracker.firebaseapp.com",
+      databaseURL:"https://equitment-tracker-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId:"equitment-tracker",
+      storageBucket:"equitment-tracker.firebasestorage.app",
+      messagingSenderId:"399917650732",
+      appId:"1:399917650732:web:65953e3593de342b181289"
+    });
+    fbDatabase=firebase.database();
+    fbRef=fbDatabase.ref('tracker');
+    fbRef.on('value',(snapshot)=>{
+      const data=snapshot.val();
+      if(data){
+        db=data;
+        ITEMS.forEach(i=>{if(!db.items[i.id])db.items[i.id]={status:'base',where:'',ts:'',notes:'',faultDesc:''};});
+        try{localStorage.setItem(KEY,JSON.stringify(db));}catch(e){}
+        renderAll();
+        if(!firebaseReady){
+          firebaseReady=true;
+          document.getElementById('sync-status').textContent='🟢 מחובר';
+          document.getElementById('sync-status').style.color='var(--green)';
+        }
+      } else {
+        // אין נתונים ב-Firebase — שלח את מה שיש ב-localStorage
+        fbRef.set(db);
+      }
+    },(error)=>{
+      document.getElementById('sync-status').textContent='🔴 אופליין';
+      document.getElementById('sync-status').style.color='var(--red)';
+    });
+  }catch(e){
+    document.getElementById('sync-status').textContent='🔴 שגיאה';
+  }
+}
 
 function save(){
   try{localStorage.setItem(KEY,JSON.stringify(db));}catch(e){}
-  try{set(dbRef, db);}catch(e){}
+  try{if(fbRef) fbRef.set(db);}catch(e){}
 }
 
 function load(){
-  // טען מ-localStorage תחילה (מיידי)
   try{const s=localStorage.getItem(KEY);if(s)db=JSON.parse(s);}catch(e){}
   ITEMS.forEach(i=>{if(!db.items[i.id])db.items[i.id]={status:'base',where:'',ts:'',notes:'',faultDesc:''};});
   renderAll();
-
-  // הקשב ל-Firebase בזמן אמת
-  onValue(dbRef, (snapshot)=>{
-    const data = snapshot.val();
-    if(data){
-      db = data;
-      ITEMS.forEach(i=>{if(!db.items[i.id])db.items[i.id]={status:'base',where:'',ts:'',notes:'',faultDesc:''};});
-      try{localStorage.setItem(KEY,JSON.stringify(db));}catch(e){}
-      renderAll();
-      if(!firebaseReady){
-        firebaseReady=true;
-        document.getElementById('sync-status').textContent='🟢 מחובר';
-        document.getElementById('sync-status').style.color='var(--green)';
-      }
-    }
-  }, (error)=>{
-    document.getElementById('sync-status').textContent='🔴 אופליין';
-    document.getElementById('sync-status').style.color='var(--red)';
-  });
 }
 
 function now(){const n=new Date();return`${n.getDate()}/${n.getMonth()+1} ${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;}
@@ -695,7 +697,7 @@ function showPage(name,btn){
   if(sb)sb.style.display=name==='inventory'?'':'none';
 }
 
-load();renderAll();
+load();renderAll();initFirebase();
 </script>
 </body>
 </html>
