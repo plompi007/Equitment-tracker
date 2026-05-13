@@ -543,21 +543,25 @@ function doSubmit(btn){
   const t=now();
   const faultDesc=(document.getElementById('fault-text')||{}).value||'';
   const notes=(document.getElementById('notes-txt')||{}).value||'';
-  F.items.forEach(id=>{
-    const qtyNote=(id==='פקפק'&&F.itemQty&&F.itemQty['פקפק'])?`כמות: ${F.itemQty['פקפק']}`:'';
-    const itemNotes=[qtyNote,notes].filter(Boolean).join(' | ');
-    if(F.action==='dispatch'){
-      db.items[id]={status:F.cond==='fault'?'fault':'out',where:F.person,ts:t,notes:itemNotes,faultDesc};
-      db.log.unshift({id,action:'out',person:F.person,cond:F.cond,faultDesc,notes:itemNotes,ts:t});
-    } else {
-      db.items[id]={status:F.cond==='fault'?'fault':'base',where:'',ts:t,notes:itemNotes,faultDesc};
-      db.log.unshift({id,action:'in',person:'',cond:F.cond,faultDesc,notes:itemNotes,ts:t});
-    }
-  });
-  if(db.log.length>300)db.log.length=300;
-  save();
-  renderAll();
-  showShareSheet(t,faultDesc,notes);
+  try {
+    F.items.forEach(id=>{
+      const qtyNote=(id==='פקפק'&&F.itemQty&&F.itemQty['פקפק'])?`כמות: ${F.itemQty['פקפק']}`:'';
+      const itemNotes=[qtyNote,notes].filter(Boolean).join(' | ');
+      if(F.action==='dispatch'){
+        db.items[id]={status:F.cond==='fault'?'fault':'out',where:F.person,ts:t,notes:itemNotes,faultDesc};
+        db.log.unshift({id,action:'out',person:F.person,cond:F.cond,faultDesc,notes:itemNotes,ts:t});
+      } else {
+        db.items[id]={status:F.cond==='fault'?'fault':'base',where:'',ts:t,notes:itemNotes,faultDesc};
+        db.log.unshift({id,action:'in',person:'',cond:F.cond,faultDesc,notes:itemNotes,ts:t});
+      }
+    });
+    if(db.log.length>300)db.log.length=300;
+    save();
+    renderAll();
+    showShareSheet(t,faultDesc,notes);
+  } catch(e) {
+    alert('שגיאה: '+e.message);
+  }
 }
 
 function buildWhatsappMsg(t, faultDesc, notes){
