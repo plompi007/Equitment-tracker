@@ -271,6 +271,8 @@ function initFirebase(){
       const data=snapshot.val();
       if(data){
         db=data;
+        if(!db.log) db.log=[];
+        if(!db.items) db.items={};
         ITEMS.forEach(i=>{if(!db.items[i.id])db.items[i.id]={status:'base',where:'',ts:'',notes:'',faultDesc:''};});
         try{localStorage.setItem(KEY,JSON.stringify(db));}catch(e){}
         renderAll();
@@ -543,6 +545,8 @@ function doSubmit(btn){
   const t=now();
   const faultDesc=(document.getElementById('fault-text')||{}).value||'';
   const notes=(document.getElementById('notes-txt')||{}).value||'';
+  if(!db.log) db.log=[];
+  if(!db.items) db.items={};
   try {
     F.items.forEach(id=>{
       const qtyNote=(id==='פקפק'&&F.itemQty&&F.itemQty['פקפק'])?`כמות: ${F.itemQty['פקפק']}`:'';
