@@ -482,7 +482,7 @@ function stepCondition(type){
   <textarea class="fault-field" id="fault-text" placeholder="תאר את התקלה..."></textarea>
   <span class="slabel">הערות</span>
   <textarea class="notes" id="notes-txt" placeholder="סוללות, ציוד נלווה..."></textarea>
-  <button class="next-btn" id="save-btn" style="margin-top:8px" onclick="doSubmit(this)">שמור ${F.items.length} פריטים</button>
+  <button class="next-btn" id="save-btn" style="margin-top:8px" onclick="doSubmit(this)">שמור פריטים</button>
   <button class="back-btn" onclick="step=${backStep};renderStep()">חזרה</button>`;
 }
 
@@ -540,7 +540,6 @@ function setCond(c){
   if(ft) ft.className='fault-field'+(c==='fault'?' on':'');
 }
 function doSubmit(btn){
-  if(btn) btn.disabled=true;
   const t=now();
   const faultDesc=(document.getElementById('fault-text')||{}).value||'';
   const notes=(document.getElementById('notes-txt')||{}).value||'';
