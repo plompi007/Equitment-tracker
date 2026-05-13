@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>מעקב ציוד</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap');
+:root {
+  --bg:#f0f2f5;--s1:#ffffff;--s2:#ffffff;--s3:#f8f9fb;
+  --border:#e2e6ec;--border2:#eaedf2;
+  --accent:#2563eb;--accent-dim:rgba(37,99,235,.1);
+  --green:#16a34a;--green-dim:rgba(22,163,74,.1);
+  --yellow:#d97706;--yellow-dim:rgba(217,119,6,.1);
+  --red:#dc2626;--red-dim:rgba(220,38,38,.1);
+  --text:#111827;--text2:#6b7280;--text3:#9ca3af;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100dvh}
+
+.hdr{flex-shrink:0;background:var(--s1);border-bottom:1px solid var(--border2);padding:12px 14px 10px;display:flex;align-items:center;gap:10px}
+.hdr-title{font-size:16px;font-weight:800;flex:1}
+.pill{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.pill-out{background:var(--yellow-dim);color:var(--yellow)}
+.pill-fault{background:var(--red-dim);color:var(--red)}
+
+.tabs{flex-shrink:0;display:flex;background:var(--s1);border-bottom:1px solid var(--border2);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;padding:10px 16px;font:600 13px/1 'Heebo',sans-serif;color:var(--text2);cursor:pointer;border:none;border-bottom:2px solid transparent;background:none;transition:all .15s}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+
+.body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.page{display:none;padding:12px}
+.page.on{display:block}
+
+.sum-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
+.sum-card{background:var(--s1);border:1px solid var(--border2);border-radius:10px;padding:10px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.sum-num{font-size:24px;font-weight:900;line-height:1;margin-bottom:2px}
+.sum-lbl{font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+
+.search-box{width:100%;background:var(--s1);border:1px solid var(--border2);border-radius:9px;padding:9px 12px;color:var(--text);font:500 14px/1 'Heebo',sans-serif;outline:none;margin-bottom:10px}
+.search-box::placeholder{color:var(--text3)}
+.search-box:focus{border-color:var(--accent)}
+
+.cat-hdr{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);padding:4px 0 7px;margin-top:6px;border-bottom:1px solid var(--border2);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+
+.item-row{display:flex;align-items:center;background:var(--s1);border:1px solid var(--border2);border-radius:9px;padding:10px 12px;margin-bottom:6px;gap:10px;cursor:pointer;transition:all .12s;position:relative;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.item-row::before{content:'';position:absolute;right:0;top:0;bottom:0;width:3px;border-radius:0 9px 9px 0}
+.item-row.base::before{background:var(--green)}
+.item-row.out::before{background:var(--yellow)}
+.item-row.fault::before{background:var(--red)}
+.item-row:active{transform:scale(.98)}
+.item-id{font-size:14px;font-weight:800;flex:1;letter-spacing:.3px}
+.item-where{font-size:12px;color:var(--text2);flex:1;text-align:left}
+.item-badge{font-size:10px;font-weight:700;padding:3px 7px;border-radius:6px}
+.b-base{background:var(--green-dim);color:var(--green)}
+.b-out{background:var(--yellow-dim);color:var(--yellow)}
+.b-fault{background:var(--red-dim);color:var(--red)}
+
+.log-row{background:var(--s1);border:1px solid var(--border2);border-radius:9px;padding:10px 12px;margin-bottom:6px}
+.log-top{display:flex;justify-content:space-between;margin-bottom:4px}
+.log-id{font-size:14px;font-weight:700}
+.log-ts{font-size:11px;color:var(--text3)}
+.log-sub{font-size:12px;color:var(--text2);line-height:1.6}
+.log-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;margin-right:4px}
+.lb-out{background:var(--yellow-dim);color:var(--yellow)}
+.lb-in{background:var(--green-dim);color:var(--green)}
+.lb-fault{background:var(--red-dim);color:var(--red)}
+
+.empty{text-align:center;padding:40px 16px;color:var(--text3);font-size:13px}
+
+.fab-wrap{flex-shrink:0;padding:10px 14px 16px;background:var(--bg);border-top:1px solid var(--border2)}
+.fab{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:12px;font:700 15px/1 'Heebo',sans-serif;cursor:pointer;transition:opacity .15s}
+.fab:active{opacity:.85}
+
+/* SHEET */
+.sheet-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:flex-end;justify-content:center}
+.sheet-bg.on{display:flex}
+.sheet{background:var(--s2);border:1px solid var(--border);border-radius:20px 20px 0 0;width:100%;max-width:540px;padding:16px 14px 28px;max-height:92dvh;overflow-y:auto;animation:up .22s ease}
+@keyframes up{from{transform:translateY(24px);opacity:0}to{transform:translateY(0);opacity:1}}
+.sheet-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px}
+.sheet-title{font-size:17px;font-weight:800;margin-bottom:14px}
+
+.steps{display:flex;gap:6px;margin-bottom:18px}
+.step-dot{height:3px;border-radius:3px;flex:1;background:var(--border);transition:background .2s}
+.step-dot.done{background:var(--accent)}
+
+.slabel{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:8px;display:block}
+
+.person-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:12px}
+.person-btn{padding:11px 6px;border-radius:9px;border:1.5px solid var(--border);background:var(--s1);color:var(--text2);font:600 13px/1 'Heebo',sans-serif;cursor:pointer;text-align:center;transition:all .12s}
+.person-btn.on{border-color:var(--accent);background:var(--accent-dim);color:var(--accent)}
+.person-other{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:9px;padding:10px 12px;color:var(--text);font:500 14px/1 'Heebo',sans-serif;outline:none;transition:border-color .2s;margin-bottom:14px}
+.person-other:focus{border-color:var(--accent)}
+.person-other::placeholder{color:var(--text3)}
+
+.cat-check-hdr{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);padding:6px 0;margin-top:8px;border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between}
+.cat-check-hdr button{font:600 11px/1 'Heebo',sans-serif;color:var(--accent);background:none;border:none;cursor:pointer}
+.check-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:4px}
+.check-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1.5px solid var(--border2);border-radius:9px;cursor:pointer;background:var(--s1);transition:all .12s}
+.check-item.on{border-color:var(--accent);background:var(--accent-dim)}
+.check-item:active{transform:scale(.97)}
+.check-box{width:20px;height:20px;border-radius:5px;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .12s}
+.check-box.on{background:var(--accent);border-color:var(--accent)}
+.check-box.on::after{content:'✓';color:#fff;font-size:12px;font-weight:700}
+.check-lbl{font-size:13px;font-weight:700;flex:1;line-height:1.2}
+.check-sub{font-size:10px;color:var(--accent);font-weight:600}
+
+.cond-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.cond-btn{padding:11px;border-radius:9px;border:1.5px solid var(--border);background:var(--s1);color:var(--text2);font:700 13px/1 'Heebo',sans-serif;cursor:pointer;text-align:center;transition:all .12s}
+.cond-btn.ok-on{border-color:var(--green);background:var(--green-dim);color:var(--green)}
+.cond-btn.fault-on{border-color:var(--red);background:var(--red-dim);color:var(--red)}
+
+.fault-field,textarea{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:9px;padding:10px 12px;color:var(--text);font:500 14px/1.5 'Heebo',sans-serif;outline:none;resize:none;height:66px;margin-bottom:14px}
+.fault-field{display:none}
+.fault-field.on{display:block}
+.fault-field:focus,textarea:focus{border-color:var(--red)}
+textarea.notes{border-color:var(--border);margin-bottom:16px}
+textarea.notes:focus{border-color:var(--accent)}
+
+.next-btn{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:11px;font:700 15px/1 'Heebo',sans-serif;cursor:pointer;transition:opacity .15s}
+.next-btn:active{opacity:.85}
+.next-btn:disabled{opacity:.35;cursor:default}
+.back-btn{width:100%;padding:11px;margin-top:7px;background:none;color:var(--text2);border:1px solid var(--border);border-radius:11px;font:600 13px/1 'Heebo',sans-serif;cursor:pointer}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-title">⬡ מעקב ציוד</div>
+  <div id="sync-status" style="font-size:11px;font-weight:600;color:var(--text3)">⏳ מתחבר...</div>
+  <div class="pill pill-out" id="hdr-out">בשטח: 0</div>
+  <div class="pill pill-fault" id="hdr-fault">תקלות: 0</div>
+</div>
+<div class="tabs">
+  <button class="tab on" onclick="showPage('inventory',this)">מלאי</button>
+  <button class="tab" onclick="showPage('out',this)">בשטח</button>
+  <button class="tab" onclick="showPage('log',this)">יומן</button>
+</div>
+<div class="body">
+  <div class="page on" id="page-inventory">
+    <input class="search-box" id="search-box" placeholder="חיפוש..." oninput="renderInventory()">
+    <div class="sum-row">
+      <div class="sum-card"><div class="sum-num" id="sn-base" style="color:var(--green)">-</div><div class="sum-lbl">בבסיס</div></div>
+      <div class="sum-card"><div class="sum-num" id="sn-out" style="color:var(--yellow)">-</div><div class="sum-lbl">בשטח</div></div>
+      <div class="sum-card"><div class="sum-num" id="sn-fault" style="color:var(--red)">-</div><div class="sum-lbl">תקלות</div></div>
+    </div>
+    <div id="inventory-list"></div>
+  </div>
+  <div class="page" id="page-out"><div id="out-list"></div></div>
+  <div class="page" id="page-log"><div id="log-list"></div></div>
+</div>
+<div class="fab-wrap">
+  <button class="fab" onclick="startFlow()">+ העמסה / החזרה</button>
+</div>
+
+<!-- SHEET -->
+<div class="sheet-bg" id="sheet-bg" onclick="bgClose(event)">
+<div class="sheet">
+  <div class="sheet-handle"></div>
+  <div class="steps"><div class="step-dot" id="d0"></div><div class="step-dot" id="d1"></div><div class="step-dot" id="d2"></div></div>
+  <div id="sheet-content"></div>
+</div>
+</div>
+
+<script type="module">
+const ITEMS=[
+  // רחפני משימה — ממויין בסדר עולה
+  {id:'M-31',cat:'רחפני משימה'},{id:'M-1308',cat:'רחפני משימה'},{id:'M-1396',cat:'רחפני משימה'},
+  {id:'M-3614',cat:'רחפני משימה'},{id:'M-3887',cat:'רחפני משימה'},{id:'M-4160',cat:'רחפני משימה'},
+  {id:'M-4498',cat:'רחפני משימה'},{id:'M-4700',cat:'רחפני משימה'},{id:'M-5134',cat:'רחפני משימה'},
+  {id:'M-5212',cat:'רחפני משימה'},{id:'M-5614',cat:'רחפני משימה'},{id:'M-5630',cat:'רחפני משימה'},
+  {id:'M-5726',cat:'רחפני משימה'},{id:'M-5732',cat:'רחפני משימה'},{id:'M-5733',cat:'רחפני משימה'},
+  {id:'M-5736',cat:'רחפני משימה'},{id:'M-5924',cat:'רחפני משימה'},{id:'M-6799',cat:'רחפני משימה'},
+  {id:'M-20527',cat:'רחפני משימה'},{id:'M-20624',cat:'רחפני משימה'},
+  // שלטי משימה — ממויין בסדר עולה
+  {id:'שלט-M-31',cat:'שלטי משימה'},{id:'שלט-M-686',cat:'שלטי משימה'},{id:'שלט-M-1308',cat:'שלטי משימה'},
+  {id:'שלט-M-1396',cat:'שלטי משימה'},{id:'שלט-M-3614',cat:'שלטי משימה'},{id:'שלט-M-3887',cat:'שלטי משימה'},
+  {id:'שלט-M-4160',cat:'שלטי משימה'},{id:'שלט-M-4167',cat:'שלטי משימה'},{id:'שלט-M-4498',cat:'שלטי משימה'},
+  {id:'שלט-M-4700',cat:'שלטי משימה'},{id:'שלט-M-5134',cat:'שלטי משימה'},{id:'שלט-M-5212',cat:'שלטי משימה'},
+  {id:'שלט-M-5614',cat:'שלטי משימה'},{id:'שלט-M-5630',cat:'שלטי משימה'},{id:'שלט-M-5726',cat:'שלטי משימה'},
+  {id:'שלט-M-5732',cat:'שלטי משימה'},{id:'שלט-M-5733',cat:'שלטי משימה'},{id:'שלט-M-5736',cat:'שלטי משימה'},
+  {id:'שלט-M-5924',cat:'שלטי משימה'},{id:'שלט-M-6799',cat:'שלטי משימה'},
+  {id:'שלט-M-20527',cat:'שלטי משימה'},{id:'שלט-M-20624',cat:'שלטי משימה'},
+  // מתקני הטלה EVOMAX
+  {id:'1184',cat:'מתקני הטלה EVOMAX'},{id:'393',cat:'מתקני הטלה EVOMAX'},{id:'1153',cat:'מתקני הטלה EVOMAX'},
+  {id:'836',cat:'מתקני הטלה EVOMAX'},{id:'848',cat:'מתקני הטלה EVOMAX'},{id:'849',cat:'מתקני הטלה EVOMAX'},
+  {id:'1229',cat:'מתקני הטלה EVOMAX'},{id:'1241',cat:'מתקני הטלה EVOMAX'},{id:'1326',cat:'מתקני הטלה EVOMAX'},
+  {id:'1452',cat:'מתקני הטלה EVOMAX'},{id:'1617',cat:'מתקני הטלה EVOMAX'},{id:'1625',cat:'מתקני הטלה EVOMAX'},
+  {id:'1633',cat:'מתקני הטלה EVOMAX'},{id:'1640',cat:'מתקני הטלה EVOMAX'},{id:'1691',cat:'מתקני הטלה EVOMAX'},
+  // שלט EVO MAX
+  {id:'שלט-אבו-145',cat:'שלט EVO MAX'},{id:'שלט-אבו-15',cat:'שלט EVO MAX'},
+  // רחפני אווטה
+  {id:'אווטה-2043',cat:'רחפני אווטה'},{id:'אווטה-8526',cat:'רחפני אווטה'},{id:'אווטה-2177',cat:'רחפני אווטה'},
+  {id:'אווטה-2940',cat:'רחפני אווטה'},{id:'אווטה-4750',cat:'רחפני אווטה'},{id:'אווטה-3021',cat:'רחפני אווטה'},
+  {id:'אווטה-4767',cat:'רחפני אווטה'},{id:'אווטה-3165',cat:'רחפני אווטה'},{id:'אווטה-5071',cat:'רחפני אווטה'},
+  {id:'אווטה-3026',cat:'רחפני אווטה'},{id:'אווטה-5284',cat:'רחפני אווטה'},{id:'אווטה-2933',cat:'רחפני אווטה'},
+  {id:'אווטה-5364',cat:'רחפני אווטה'},{id:'אווטה-3299',cat:'רחפני אווטה'},{id:'אווטה-5428',cat:'רחפני אווטה'},
+  {id:'אווטה-3171',cat:'רחפני אווטה'},{id:'אווטה-5456',cat:'רחפני אווטה'},{id:'אווטה-3414',cat:'רחפני אווטה'},
+  {id:'אווטה-5532',cat:'רחפני אווטה'},{id:'אווטה-5431',cat:'רחפני אווטה'},{id:'אווטה-5937',cat:'רחפני אווטה'},
+  {id:'אווטה-1266',cat:'רחפני אווטה'},{id:'אווטה-4230',cat:'רחפני אווטה'},{id:'אווטה-3858',cat:'רחפני אווטה'},
+  {id:'אווטה-5224',cat:'רחפני אווטה'},{id:'אווטה-1630',cat:'רחפני אווטה'},{id:'אווטה-6467',cat:'רחפני אווטה'},
+  {id:'אווטה-1924',cat:'רחפני אווטה'},{id:'אווטה-3935',cat:'רחפני אווטה'},
+  // צג בוסקילר
+  {id:'צג-267',cat:'צג בוסקילר'},{id:'צג-268',cat:'צג בוסקילר'},{id:'צג-269',cat:'צג בוסקילר'},
+  {id:'צג-270',cat:'צג בוסקילר'},{id:'צג-272',cat:'צג בוסקילר'},{id:'צג-273',cat:'צג בוסקילר'},
+  {id:'צג-274',cat:'צג בוסקילר'},{id:'צג-275',cat:'צג בוסקילר'},
+  // משקפי מציאות אווטה
+  {id:'משק-510',cat:'משקפי אווטה'},{id:'משק-690',cat:'משקפי אווטה'},{id:'משק-1135',cat:'משקפי אווטה'},
+  {id:'משק-1655',cat:'משקפי אווטה'},{id:'משק-1672',cat:'משקפי אווטה'},{id:'משק-1976',cat:'משקפי אווטה'},
+  {id:'משק-2128',cat:'משקפי אווטה'},{id:'משק-2188',cat:'משקפי אווטה'},{id:'משק-2268',cat:'משקפי אווטה'},
+  {id:'משק-2332',cat:'משקפי אווטה'},{id:'משק-2335',cat:'משקפי אווטה'},{id:'משק-2360',cat:'משקפי אווטה'},
+  {id:'משק-2436',cat:'משקפי אווטה'},{id:'משק-139',cat:'משקפי אווטה'},{id:'משק-386',cat:'משקפי אווטה'},
+  // שלטי אווטה
+  {id:'שלט-אווטה-510',cat:'שלטי אווטה'},{id:'שלט-אווטה-690',cat:'שלטי אווטה'},{id:'שלט-אווטה-1655',cat:'שלטי אווטה'},
+  {id:'שלט-אווטה-1672',cat:'שלטי אווטה'},{id:'שלט-אווטה-1976',cat:'שלטי אווטה'},{id:'שלט-אווטה-2188',cat:'שלטי אווטה'},
+  {id:'שלט-אווטה-2268',cat:'שלטי אווטה'},{id:'שלט-אווטה-2332',cat:'שלטי אווטה'},{id:'שלט-אווטה-2360',cat:'שלטי אווטה'},
+  {id:'שלט-אווטה-2436',cat:'שלטי אווטה'},{id:'שלט-אווטה-2335',cat:'שלטי אווטה'},{id:'שלט-אווטה-1135',cat:'שלטי אווטה'},
+  {id:'שלט-אווטה-2128',cat:'שלטי אווטה'},{id:'שלט-אווטה-139',cat:'שלטי אווטה'},{id:'שלט-אווטה-386',cat:'שלטי אווטה'},
+  // רחפני אלפא
+  {id:'אלפא-290',cat:'רחפני אלפא'},{id:'אלפא-338',cat:'רחפני אלפא'},
+  {id:'אלפא-385',cat:'רחפני אלפא'},{id:'אלפא-485',cat:'רחפני אלפא'},
+  // שלטי אלפא
+  {id:'שלט-אלפא-290',cat:'שלטי אלפא'},{id:'שלט-אלפא-338',cat:'שלטי אלפא'},
+  {id:'שלט-אלפא-385',cat:'שלטי אלפא'},{id:'שלט-אלפא-485',cat:'שלטי אלפא'},
+  // מתקני הטלה אלפא
+  {id:'מתקן-אלפא-116',cat:'מתקני הטלה אלפא'},{id:'מתקן-אלפא-115',cat:'מתקני הטלה אלפא'},
+  {id:'מתקן-אלפא-224',cat:'מתקני הטלה אלפא'},
+  {id:'אנטנת-אלפא',cat:'מתקני הטלה אלפא'},
+  {id:'תיק-הטלות-שחור',cat:'מתקני הטלה אלפא'},
+  // FLYCART3
+  {id:'flycart-13',cat:'FLYCART3'},{id:'flycart-56',cat:'FLYCART3'},{id:'flycart-88',cat:'FLYCART3'},
+  {id:'שלט-flycart-13',cat:'FLYCART3'},
+  // רחפן עטלף 5
+  {id:'260301804',cat:'רחפן עטלף 5'},{id:'260301805',cat:'רחפן עטלף 5'},{id:'260301819',cat:'רחפן עטלף 5'},
+  {id:'260301823',cat:'רחפן עטלף 5'},{id:'260301833',cat:'רחפן עטלף 5'},{id:'260301841',cat:'רחפן עטלף 5'},
+  {id:'260301844',cat:'רחפן עטלף 5'},{id:'260301845',cat:'רחפן עטלף 5'},{id:'260301851',cat:'רחפן עטלף 5'},
+  {id:'260301865',cat:'רחפן עטלף 5'},{id:'260301872',cat:'רחפן עטלף 5'},{id:'260301887',cat:'רחפן עטלף 5'},
+  {id:'260301900',cat:'רחפן עטלף 5'},{id:'260301903',cat:'רחפן עטלף 5'},{id:'260301919',cat:'רחפן עטלף 5'},
+  {id:'260301920',cat:'רחפן עטלף 5'},{id:'260301923',cat:'רחפן עטלף 5'},{id:'260301943',cat:'רחפן עטלף 5'},
+  {id:'260301947',cat:'רחפן עטלף 5'},{id:'260301950',cat:'רחפן עטלף 5'},
+  // כלי טיס זיק
+  {id:'Z-145',cat:'כלי טיס זיק'},{id:'Z-187',cat:'כלי טיס זיק'},
+  // ציוד נוסף
+  {id:'גנרטור-1',cat:'ציוד נוסף'},
+  {id:'פקפק',cat:'ציוד נוסף'},
+];
+const PEOPLE=['מטיס 1','מטיס 2','מטיס 3','לוס','מטווח 8'];
+const KEY='uav3_v1';
+let db={items:{},log:[]};
+
+// ── FIREBASE ──
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDsQuwBYUEvhdHXS3xKGhnkg__ShMbJ_bQ",
+  authDomain: "equitment-tracker.firebaseapp.com",
+  databaseURL: "https://equitment-tracker-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "equitment-tracker",
+  storageBucket: "equitment-tracker.firebasestorage.app",
+  messagingSenderId: "399917650732",
+  appId: "1:399917650732:web:65953e3593de342b181289"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const firebaseDb = getDatabase(firebaseApp);
+const dbRef = ref(firebaseDb, 'tracker');
+
+let firebaseReady = false;
+
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(db));}catch(e){}
+  try{set(dbRef, db);}catch(e){}
+}
+
+function load(){
+  // טען מ-localStorage תחילה (מיידי)
+  try{const s=localStorage.getItem(KEY);if(s)db=JSON.parse(s);}catch(e){}
+  ITEMS.forEach(i=>{if(!db.items[i.id])db.items[i.id]={status:'base',where:'',ts:'',notes:'',faultDesc:''};});
+  renderAll();
+
+  // הקשב ל-Firebase בזמן אמת
+  onValue(dbRef, (snapshot)=>{
+    const data = snapshot.val();
+    if(data){
+      db = data;
+      ITEMS.forEach(i=>{if(!db.items[i.id])db.items[i.id]={status:'base',where:'',ts:'',notes:'',faultDesc:''};});
+      try{localStorage.setItem(KEY,JSON.stringify(db));}catch(e){}
+      renderAll();
+      if(!firebaseReady){
+        firebaseReady=true;
+        document.getElementById('sync-status').textContent='🟢 מחובר';
+        document.getElementById('sync-status').style.color='var(--green)';
+      }
+    }
+  }, (error)=>{
+    document.getElementById('sync-status').textContent='🔴 אופליין';
+    document.getElementById('sync-status').style.color='var(--red)';
+  });
+}
+
+function now(){const n=new Date();return`${n.getDate()}/${n.getMonth()+1} ${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;}
+
+// ── SET PAIRS ──
+// רחפן + שלט יוצאים תמיד כסט
+const SET_PAIRS = {
+  // משימה
+  'M-31':'שלט-M-31','M-1308':'שלט-M-1308','M-1396':'שלט-M-1396',
+  'M-4160':'שלט-M-4160','M-4498':'שלט-M-4498','M-5212':'שלט-M-5212',
+  'M-5134':'שלט-M-5134','M-20624':'שלט-M-20624','M-3887':'שלט-M-3887','M-4700':'שלט-M-4700',
+  'M-3614':'שלט-M-3614','M-5630':'שלט-M-5630','M-5726':'שלט-M-5726','M-5732':'שלט-M-5732',
+  'M-5733':'שלט-M-5733','M-6799':'שלט-M-6799','M-20527':'שלט-M-20527','M-5736':'שלט-M-5736',
+  'M-5924':'שלט-M-5924','M-5614':'שלט-M-5614',
+  // אלפא
+  'אלפא-290':'שלט-אלפא-290','אלפא-338':'שלט-אלפא-338',
+  'אלפא-385':'שלט-אלפא-385','אלפא-485':'שלט-אלפא-485',
+  // אווטה
+  'אווטה-2043':'שלט-אווטה-510','אווטה-8526':'שלט-אווטה-690',
+  'אווטה-2177':'שלט-אווטה-1135','אווטה-2940':'שלט-אווטה-1655',
+  'אווטה-4750':'שלט-אווטה-1672','אווטה-3021':'שלט-אווטה-1976',
+  'אווטה-4767':'שלט-אווטה-2128','אווטה-3165':'שלט-אווטה-2188',
+  'אווטה-5071':'שלט-אווטה-2268','אווטה-3026':'שלט-אווטה-2332',
+  'אווטה-5284':'שלט-אווטה-2335','אווטה-2933':'שלט-אווטה-2360',
+  'אווטה-5364':'שלט-אווטה-2436','אווטה-3299':'שלט-אווטה-139',
+  'אווטה-5428':'שלט-אווטה-386',
+  // flycart
+  'flycart-13':'שלט-flycart-13',
+};
+// הפוך — שלט → רחפן
+const SET_PAIRS_REV = Object.fromEntries(Object.entries(SET_PAIRS).map(([k,v])=>[v,k]));
+
+function getPartner(id){
+  return SET_PAIRS[id] || SET_PAIRS_REV[id] || null;
+}
+
+function addToSelection(id){
+  if(!F.items.includes(id)) F.items.push(id);
+  if(id==='פקפק'){
+    const qty=prompt('כמה פקפקים?');
+    if(qty&&!isNaN(qty)&&parseInt(qty)>0) F.itemQty=F.itemQty||{};F.itemQty&&(F.itemQty['פקפק']=parseInt(qty)||1);
+  }
+  const partner=getPartner(id);
+  if(partner && db.items[partner] && db.items[partner].status==='base' && !F.items.includes(partner))
+    F.items.push(partner);
+}
+function removeFromSelection(id){
+  F.items=F.items.filter(x=>x!==id);
+  const partner=getPartner(id);
+  if(partner) F.items=F.items.filter(x=>x!==partner);
+}
+
+// ── FLOW ──
+let F={action:'dispatch',person:'',items:[],cond:'ok'};
+let step=0;
+const STEPS_DISPATCH=3, STEPS_RETURN=2;
+
+function startFlow(preItem,preAction){
+  F={action:preAction||'dispatch',person:'',items:preItem?[preItem]:[],cond:'ok'};
+  step=preItem?(preAction==='return'?1:1):0;
+  openSheet();
+}
+function openSheet(){
+  updateDots();
+  renderStep();
+  document.getElementById('sheet-bg').classList.add('on');
+}
+function bgClose(e){if(e.target===document.getElementById('sheet-bg'))closeSheet();}
+function closeSheet(){document.getElementById('sheet-bg').classList.remove('on');}
+
+function updateDots(){
+  const total=F.action==='dispatch'?STEPS_DISPATCH:STEPS_RETURN;
+  for(let i=0;i<3;i++) document.getElementById('d'+i).className='step-dot'+(i<=step?i<step+1?' done':'':'');
+  // fill completed
+  for(let i=0;i<3;i++) document.getElementById('d'+i).className='step-dot'+(i<step+1?' done':'');
+}
+
+function renderStep(){
+  updateDots();
+  const el=document.getElementById('sheet-content');
+  if(F.action==='dispatch'){
+    if(step===0) el.innerHTML=stepAction();
+    else if(step===1) el.innerHTML=stepPerson();
+    else if(step===2) el.innerHTML=stepItems();
+    else if(step===3) el.innerHTML=stepCondition('dispatch');
+  } else {
+    if(step===0) el.innerHTML=stepAction();
+    else if(step===1) el.innerHTML=stepReturnItems();
+    else if(step===2) el.innerHTML=stepCondition('return');
+  }
+  attachListeners();
+}
+
+function stepAction(){
+  return`<div class="sheet-title">מה עושים?</div>
+  <div class="cond-row" style="margin-bottom:20px">
+    <button class="cond-btn ${F.action==='dispatch'?'ok-on':''}" id="act-d" onclick="F.action='dispatch';document.getElementById('act-d').className='cond-btn ok-on';document.getElementById('act-r').className='cond-btn'">↑ העמסה לשטח</button>
+    <button class="cond-btn ${F.action==='return'?'ok-on':''}" id="act-r" onclick="F.action='return';document.getElementById('act-r').className='cond-btn ok-on';document.getElementById('act-d').className='cond-btn'">↓ החזרה לבסיס</button>
+  </div>
+  <button class="next-btn" onclick="step=1;renderStep()">המשך</button>`;
+}
+
+function stepPerson(){
+  const btns=PEOPLE.map(p=>`<button class="person-btn${F.person===p?' on':''}" onclick="selPerson('${p}')">${p}</button>`).join('');
+  return`<div class="sheet-title">לאן יורד הציוד?</div>
+  <div class="person-grid">${btns}</div>
+  <input class="person-other" id="other-inp" placeholder="מיקום אחר / שם..." value="${PEOPLE.includes(F.person)?'':F.person}" oninput="F.person=this.value.trim();updateNext1()">
+  <button class="next-btn" id="next1" onclick="step=2;renderStep()" ${F.person?'':'disabled'}>המשך</button>
+  <button class="back-btn" onclick="step=0;renderStep()">חזרה</button>`;
+}
+
+// קטגוריות שלטים — לא מוצגות בנפרד בהעמסה (יוצאות כסט)
+const PARTNER_CATS=new Set(['שלטי משימה','שלטי אווטה','שלטי אלפא','שלטי FLYCART']);
+
+function stepItems(){
+  const cats=[...new Set(ITEMS.map(i=>i.cat))].filter(c=>!PARTNER_CATS.has(c));
+  let html=`<div class="sheet-title">פריטים → ${F.person}</div>
+  <div style="font-size:11px;color:var(--accent);margin-bottom:12px;background:var(--accent-dim);padding:7px 10px;border-radius:8px;font-weight:600">סימון רחפן = שלט יוצא אוטומטית כסט</div>`;
+  cats.forEach(cat=>{
+    const inCat=ITEMS.filter(i=>i.cat===cat&&db.items[i.id].status==='base');
+    if(!inCat.length) return;
+    html+=`<div class="cat-check-hdr"><span>${cat}</span><button onclick="toggleCat('${cat}')">כולם</button></div>`;
+    html+=`<div class="check-grid">`;
+    inCat.forEach(item=>{
+      const on=F.items.includes(item.id);
+      const partner=getPartner(item.id);
+      const partnerAvail=partner&&db.items[partner]&&db.items[partner].status==='base';
+      const partnerLabel=partner&&partnerAvail?`<div class="check-sub">+שלט</div>`:'';
+      html+=`<div class="check-item${on?' on':''}" onclick="toggleItem('${item.id}')">
+        <div class="check-box${on?' on':''}" id="cb-${item.id}"></div>
+        <div style="flex:1"><div class="check-lbl">${item.id}</div>${partnerLabel}</div>
+      </div>`;
+    });
+    html+=`</div>`;
+  });
+  const n=F.items.length;
+  html+=`<div style="height:12px"></div>
+  <button class="next-btn" id="next2" onclick="step=3;renderStep()" ${n?'':'disabled'}>${n?'המשך ('+n+' פריטים)':'המשך'}</button>
+  <button class="back-btn" onclick="step=1;renderStep()">חזרה</button>`;
+  return html;
+}
+
+function stepReturnItems(){
+  const outItems=ITEMS.filter(i=>db.items[i.id].status==='out'||db.items[i.id].status==='fault');
+  if(!outItems.length) return`<div class="sheet-title">החזרה</div><div class="empty">אין ציוד בשטח</div><button class="back-btn" onclick="step=0;renderStep()">חזרה</button>`;
+  const byP={};
+  outItems.forEach(item=>{const w=db.items[item.id].where||'לא ידוע';if(!byP[w])byP[w]=[];byP[w].push(item);});
+  let html=`<div class="sheet-title">מה חוזר?</div>`;
+  Object.keys(byP).forEach(p=>{
+    html+=`<div class="cat-check-hdr"><span>📌 ${p}</span><button onclick="togglePersonReturn('${p}')">כולם</button></div>`;
+    html+=`<div class="check-grid">`;
+    byP[p].forEach(item=>{
+      const on=F.items.includes(item.id);
+      html+=`<div class="check-item${on?' on':''}" onclick="toggleItem('${item.id}')">
+        <div class="check-box${on?' on':''}" id="cb-${item.id}"></div>
+        <div style="flex:1"><div class="check-lbl">${item.id}</div><div style="font-size:10px;color:var(--text3)">${item.cat}</div></div>
+      </div>`;
+    });
+    html+=`</div>`;
+  });
+  const n=F.items.length;
+  html+=`<div style="height:12px"></div>
+  <button class="next-btn" id="next1r" onclick="step=2;renderStep()" ${n?'':'disabled'}>${n?'המשך ('+n+' פריטים)':'המשך'}</button>
+  <button class="back-btn" onclick="step=0;renderStep()">חזרה</button>`;
+  return html;
+}
+
+function stepCondition(type){
+  const backStep=type==='dispatch'?2:1;
+  return`<div class="sheet-title">מצב הציוד</div>
+  <span class="slabel">מצב</span>
+  <div class="cond-row">
+    <button class="cond-btn ok-on" id="c-ok" onclick="setCond('ok')">✓ תקין</button>
+    <button class="cond-btn" id="c-fault" onclick="setCond('fault')">✗ תקלה</button>
+  </div>
+  <textarea class="fault-field" id="fault-text" placeholder="תאר את התקלה..."></textarea>
+  <span class="slabel">הערות</span>
+  <textarea class="notes" id="notes-txt" placeholder="סוללות, ציוד נלווה..."></textarea>
+  <button class="next-btn" onclick="submit()">שמור ${F.items.length} פריטים</button>
+  <button class="back-btn" onclick="step=${backStep};renderStep()">חזרה</button>`;
+}
+
+function attachListeners(){/* listeners are inline onclick */}
+
+function selPerson(p){
+  F.person=p;
+  document.getElementById('other-inp').value='';
+  document.querySelectorAll('.person-btn').forEach(b=>{b.className='person-btn'+(b.textContent===p?' on':'');});
+  updateNext1();
+}
+function updateNext1(){
+  const btn=document.getElementById('next1');
+  if(btn) btn.disabled=!F.person;
+}
+function toggleItem(id){
+  const isSelected=F.items.includes(id);
+  if(isSelected) removeFromSelection(id);
+  else addToSelection(id);
+  [id, getPartner(id)].filter(Boolean).forEach(x=>{
+    const cb=document.getElementById('cb-'+x);
+    if(cb){
+      const on=F.items.includes(x);
+      cb.className='check-box'+(on?' on':'');
+      const row=cb.closest('.check-item');
+      if(row) row.className='check-item'+(on?' on':'');
+    }
+  });
+  const n2=document.getElementById('next2');
+  if(n2){n2.disabled=!F.items.length;n2.textContent=F.items.length?'המשך ('+F.items.length+' פריטים)':'המשך';}
+  const n1r=document.getElementById('next1r');
+  if(n1r){n1r.disabled=!F.items.length;n1r.textContent=F.items.length?'המשך ('+F.items.length+' פריטים)':'המשך';}
+}
+function toggleCat(cat){
+  const inCat=ITEMS.filter(i=>i.cat===cat&&db.items[i.id].status==='base').map(i=>i.id);
+  const allOn=inCat.every(id=>F.items.includes(id));
+  if(allOn) inCat.forEach(id=>removeFromSelection(id));
+  else inCat.forEach(id=>addToSelection(id));
+  renderStep();
+}
+function togglePersonReturn(person){
+  const pItems=ITEMS.filter(i=>(db.items[i.id].status==='out'||db.items[i.id].status==='fault')&&db.items[i.id].where===person).map(i=>i.id);
+  const allOn=pItems.every(id=>F.items.includes(id));
+  if(allOn) F.items=F.items.filter(id=>!pItems.includes(id));
+  else pItems.forEach(id=>{if(!F.items.includes(id))F.items.push(id);});
+  renderStep();
+}
+function setCond(c){
+  F.cond=c;
+  const ok=document.getElementById('c-ok');
+  const fa=document.getElementById('c-fault');
+  const ft=document.getElementById('fault-text');
+  if(ok) ok.className='cond-btn'+(c==='ok'?' ok-on':'');
+  if(fa) fa.className='cond-btn'+(c==='fault'?' fault-on':'');
+  if(ft) ft.className='fault-field'+(c==='fault'?' on':'');
+}
+function submit(){
+  const t=now();
+  const faultDesc=(document.getElementById('fault-text')||{}).value||'';
+  const notes=(document.getElementById('notes-txt')||{}).value||'';
+  F.items.forEach(id=>{
+    const qtyNote = (id==='פקפק'&&F.itemQty&&F.itemQty['פקפק']) ? `כמות: ${F.itemQty['פקפק']}` : '';
+    const itemNotes = [qtyNote, notes].filter(Boolean).join(' | ');
+    if(F.action==='dispatch'){
+      db.items[id]={status:F.cond==='fault'?'fault':'out',where:F.person,ts:t,notes:itemNotes,faultDesc};
+      db.log.unshift({id,action:'out',person:F.person,cond:F.cond,faultDesc,notes:itemNotes,ts:t});
+    } else {
+      db.items[id]={status:F.cond==='fault'?'fault':'base',where:'',ts:t,notes:itemNotes,faultDesc};
+      db.log.unshift({id,action:'in',person:'',cond:F.cond,faultDesc,notes:itemNotes,ts:t});
+    }
+  });
+  if(db.log.length>300)db.log.length=300;
+  save();renderAll();
+  showShareSheet(t, faultDesc, notes);
+}
+
+function buildWhatsappMsg(t, faultDesc, notes){
+  const action = F.action==='dispatch' ? '📤 *העמסה לשטח*' : '📥 *החזרה לבסיס*';
+  const loc = F.action==='dispatch' ? `📌 ${F.person}` : '';
+
+  // קבץ פריטים — הסתר שלטים שהם סט של רחפן שנבחר
+  const shownPartners = new Set();
+  const lines = [];
+  F.items.forEach(id=>{
+    if(shownPartners.has(id)) return;
+    const partner = getPartner(id);
+    // האם זה רחפן ראשי (לא שלט)
+    const isMain = !id.startsWith('שלט-');
+    const partnerSelected = partner && F.items.includes(partner);
+    if(isMain && partnerSelected){
+      shownPartners.add(partner);
+      const qty = (id==='פקפק'&&F.itemQty&&F.itemQty['פקפק']) ? ` x${F.itemQty['פקפק']}` : '';
+      lines.push(`• ${id} + שלט${qty}`);
+    } else {
+      const qty = (id==='פקפק'&&F.itemQty&&F.itemQty['פקפק']) ? ` x${F.itemQty['פקפק']}` : '';
+      lines.push(`• ${id}${qty}`);
+    }
+  });
+
+  const condLine = F.cond==='fault'
+    ? `⚠️ *תקלה:* ${faultDesc||'לא צוין'}`
+    : '✅ תקין';
+
+  const parts = [
+    `${action} | ${t}`,
+    loc,
+    '',
+    lines.join('\n'),
+    '',
+    condLine,
+    notes ? `📝 ${notes}` : ''
+  ].filter(x=>x!==null&&x!==undefined);
+
+  return parts.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+}
+
+function showShareSheet(t, faultDesc, notes){
+  const msg = buildWhatsappMsg(t, faultDesc, notes);
+  const el = document.getElementById('sheet-content');
+  const encoded = encodeURIComponent(msg);
+  el.innerHTML = `
+    <div class="sheet-title">✅ נשמר בהצלחה</div>
+    <div style="background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:12px;font-size:13px;line-height:1.7;white-space:pre-wrap;margin-bottom:16px;direction:rtl">${msg.replace(/\*/g,'<b>').replace(/\*/g,'</b>')}</div>
+    <a href="https://wa.me/?text=${encoded}" target="_blank" style="display:block;width:100%;padding:14px;background:#25D366;color:#fff;border:none;border-radius:11px;font:700 15px/1 'Heebo',sans-serif;cursor:pointer;text-align:center;text-decoration:none;box-sizing:border-box;margin-bottom:8px">
+      📲 שלח לוואטסאפ
+    </a>
+    <button class="back-btn" onclick="closeSheet()">סגור</button>
+  `;
+  document.getElementById('sheet-bg').classList.add('on');
+}
+
+// ── RENDER ──
+function renderAll(){renderInventory();renderOut();renderLog();renderHeader();}
+function renderHeader(){
+  let o=0,f=0;
+  ITEMS.forEach(i=>{const s=db.items[i.id].status;if(s==='out')o++;if(s==='fault')f++;});
+  document.getElementById('hdr-out').textContent='בשטח: '+o;
+  document.getElementById('hdr-fault').textContent='תקלות: '+f;
+  document.getElementById('sn-base').textContent=ITEMS.length-o-f;
+  document.getElementById('sn-out').textContent=o;
+  document.getElementById('sn-fault').textContent=f;
+}
+function renderInventory(){
+  const q=(document.getElementById('search-box')?.value||'').toLowerCase();
+  const el=document.getElementById('inventory-list');el.innerHTML='';
+  const cats=[...new Set(ITEMS.map(i=>i.cat))];
+  cats.forEach(cat=>{
+    const items=ITEMS.filter(i=>i.cat===cat&&(!q||i.id.toLowerCase().includes(q)));
+    if(!items.length)return;
+    const sec=document.createElement('div');
+    sec.innerHTML=`<div class="cat-hdr"><span>${cat}</span><span style="color:var(--text3)">${items.length}</span></div>`;
+    items.forEach(item=>{
+      const s=db.items[item.id];
+      const sl=s.status==='base'?'בבסיס':s.status==='out'?'בשטח':'תקלה';
+      const bc=s.status==='base'?'b-base':s.status==='out'?'b-out':'b-fault';
+      const row=document.createElement('div');
+      row.className=`item-row ${s.status}`;
+      row.innerHTML=`<div class="item-id">${item.id}</div><div class="item-where">${s.where||''}</div><div class="item-badge ${bc}">${sl}</div>`;
+      row.onclick=()=>startFlow(item.id,s.status==='base'?'dispatch':'return');
+      sec.appendChild(row);
+    });
+    el.appendChild(sec);
+  });
+  if(!el.children.length)el.innerHTML='<div class="empty">לא נמצא</div>';
+}
+function renderOut(){
+  const el=document.getElementById('out-list');
+  const byP={};
+  ITEMS.forEach(item=>{
+    const s=db.items[item.id];
+    if(s.status==='out'||s.status==='fault'){
+      const p=s.where||'לא ידוע';
+      if(!byP[p])byP[p]=[];
+      byP[p].push({item,s});
+    }
+  });
+  el.innerHTML='';
+  const people=Object.keys(byP);
+  if(!people.length){el.innerHTML='<div class="empty">כל הציוד בבסיס ✓</div>';return;}
+  people.forEach(p=>{
+    const sec=document.createElement('div');
+    sec.innerHTML=`<div class="cat-hdr"><span>📌 ${p}</span><span style="color:var(--yellow)">${byP[p].length} פריטים</span></div>`;
+    byP[p].forEach(({item,s})=>{
+      const bc=s.status==='fault'?'b-fault':'b-out';
+      const sl=s.status==='fault'?'תקלה':'בשטח';
+      const row=document.createElement('div');
+      row.className=`item-row ${s.status}`;
+      row.innerHTML=`<div class="item-id">${item.id}</div><div class="item-where" style="color:var(--text3)">${item.cat}</div><div class="item-badge ${bc}">${sl}</div>`;
+      sec.appendChild(row);
+    });
+    el.appendChild(sec);
+  });
+}
+function renderLog(){
+  const el=document.getElementById('log-list');
+  if(!db.log.length){el.innerHTML='<div class="empty">אין רישומים עדיין</div>';return;}
+  el.innerHTML='';
+  db.log.slice(0,80).forEach(e=>{
+    const ac=e.action==='out'?'lb-out':'lb-in';
+    const al=e.action==='out'?'ירד':'חזר';
+    const fb=e.cond==='fault'?`<span class="log-badge lb-fault">תקלה</span>`:'';
+    const row=document.createElement('div');
+    row.className='log-row';
+    row.innerHTML=`<div class="log-top"><div class="log-id"><span class="log-badge ${ac}">${al}</span>${fb} ${e.id}</div><div class="log-ts">${e.ts}</div></div>
+    <div class="log-sub">${e.person?'📍 '+e.person:''}${e.faultDesc?'<br>⚠ '+e.faultDesc:''}${e.notes?'<br>📝 '+e.notes:''}</div>`;
+    el.appendChild(row);
+  });
+}
+function showPage(name,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.getElementById('page-'+name).classList.add('on');
+  btn.classList.add('on');
+  const sb=document.getElementById('search-box');
+  if(sb)sb.style.display=name==='inventory'?'':'none';
+}
+
+load();renderAll();
+</script>
+</body>
+</html>
