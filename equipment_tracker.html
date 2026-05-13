@@ -627,19 +627,31 @@ function openItemMenu(id){
   const el=document.getElementById('sheet-content');
   el.innerHTML=`
     <div class="sheet-title">${id}</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:16px">${isWorn?'מסומן כבלאי':'בבסיס'}</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:16px">${isWorn?'מסומן כבלאי — '+( s.wornReason||'ללא סיבה'):'בבסיס'}</div>
     ${!isWorn?`<button class="next-btn" style="margin-bottom:8px" onclick="startFlow('${id}','dispatch')">↑ העמסה לשטח</button>`:''}
-    <button class="next-btn" style="background:${isWorn?'var(--green)':'var(--red)'};margin-bottom:8px" onclick="toggleWorn('${id}')">
-      ${isWorn?'✓ החזר לתקין':'✗ סמן כבלאי'}
-    </button>
+    ${!isWorn?`
+    <span class="slabel">סיבת בלאי</span>
+    <textarea class="notes" id="worn-reason" placeholder="תאר את הבעיה..." style="margin-bottom:8px"></textarea>
+    <button class="next-btn" style="background:var(--red);margin-bottom:8px" onclick="markWorn('${id}')">✗ סמן כבלאי</button>
+    `:`<button class="next-btn" style="background:var(--green);margin-bottom:8px" onclick="markOk('${id}')">✓ החזר לתקין</button>`}
     <button class="back-btn" onclick="closeSheet()">סגור</button>
   `;
   document.getElementById('sheet-bg').classList.add('on');
 }
 
-function toggleWorn(id){
+function markWorn(id){
   if(!db.items[id]) return;
-  db.items[id].worn=!db.items[id].worn;
+  const reason=(document.getElementById('worn-reason')||{}).value||'';
+  db.items[id].worn=true;
+  db.items[id].wornReason=reason;
+  db.items[id].status='base';
+  save();renderAll();closeSheet();
+}
+
+function markOk(id){
+  if(!db.items[id]) return;
+  db.items[id].worn=false;
+  db.items[id].wornReason='';
   save();renderAll();closeSheet();
 }
 
@@ -824,7 +836,47 @@ function showPage(name,btn){
   if(sb)sb.style.display=name==='inventory'?'':'none';
 }
 
-load();renderAll();initFirebase();
+const APP_PASS = 'balar2026';
+
+function checkAuth(){
+  if(localStorage.getItem('uav_auth')===APP_PASS) return true;
+  document.body.style.cssText='display:flex;align-items:center;justify-content:center;background:#f0f2f5;height:100dvh';
+  document.body.innerHTML=`
+    <div style="background:#fff;border-radius:16px;padding:32px 24px;width:90%;max-width:320px;box-shadow:0 4px 20px rgba(0,0,0,.1);text-align:center;font-family:Heebo,sans-serif">
+      <div style="font-size:28px;margin-bottom:8px">&#x2B21;</div>
+      <div style="font-size:18px;font-weight:800;margin-bottom:4px;color:#111">&#x05DE;&#x05E2;&#x05E7;&#x05D1; &#x05E6;&#x05D9;&#x05D5;&#x05D3;</div>
+      <div style="font-size:13px;color:#6b7280;margin-bottom:24px">&#x05D4;&#x05D6;&#x05DF; &#x05E1;&#x05D9;&#x05E1;&#x05DE;&#x05D0; &#x05DC;&#x05D4;&#x05DE;&#x05E9;&#x05DA;</div>
+      <input id="pass-inp" type="password" placeholder="Password"
+        style="width:100%;padding:12px;border:1.5px solid #e2e6ec;border-radius:10px;font-size:16px;font-family:Heebo,sans-serif;outline:none;text-align:center;direction:ltr;margin-bottom:12px;box-sizing:border-box"
+        onkeydown="if(event.key==='Enter')doLogin()">
+      <button onclick="doLogin()"
+        style="width:100%;padding:13px;background:#2563eb;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;font-family:Heebo,sans-serif;cursor:pointer">
+        &#x05DB;&#x05E0;&#x05D9;&#x05E1;&#x05D4;
+      </button>
+      <div id="pass-err" style="color:#dc2626;font-size:13px;margin-top:10px;display:none">&#x05E1;&#x05D9;&#x05E1;&#x05DE;&#x05D0; &#x05E9;&#x05D2;&#x05D5;&#x05D9;&#x05D0;</div>
+    </div>
+  `;
+  setTimeout(function(){ var el=document.getElementById('pass-inp'); if(el) el.focus(); },100);
+  return false;
+}
+
+function doLogin(){
+  var val=document.getElementById('pass-inp').value;
+  if(val===APP_PASS){
+    localStorage.setItem('uav_auth',APP_PASS);
+    location.reload();
+  } else {
+    document.getElementById('pass-err').style.display='block';
+    document.getElementById('pass-inp').value='';
+    document.getElementById('pass-inp').focus();
+  }
+}
+
+load();
+if(checkAuth()){
+  renderAll();
+  initFirebase();
+}
 document.getElementById('sheet-bg').addEventListener('click', function(e){
   if(e.target===this) closeSheet();
 });
