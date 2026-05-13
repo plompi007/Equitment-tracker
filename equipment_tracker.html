@@ -124,8 +124,8 @@ textarea.notes:focus{border-color:var(--accent)}
 .next-btn:disabled{opacity:.35;cursor:default}
 .back-btn{width:100%;padding:11px;margin-top:7px;background:none;color:var(--text2);border:1px solid var(--border);border-radius:11px;font:600 13px/1 'Heebo',sans-serif;cursor:pointer}
 </style>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
 
@@ -479,8 +479,8 @@ function stepCondition(type){
   <textarea class="fault-field" id="fault-text" placeholder="תאר את התקלה..."></textarea>
   <span class="slabel">הערות</span>
   <textarea class="notes" id="notes-txt" placeholder="סוללות, ציוד נלווה..."></textarea>
-  <button class="next-btn" onclick="submit()">שמור ${F.items.length} פריטים</button>
-  <button class="back-btn" onclick="step=${backStep};renderStep()">חזרה</button>`;
+  <button class="next-btn" onclick="event.stopPropagation();submit()">שמור ${F.items.length} פריטים</button>
+  <button class="back-btn" onclick="event.stopPropagation();step=${backStep};renderStep()">חזרה</button>`;
 }
 
 function attachListeners(){/* listeners are inline onclick */}
@@ -600,10 +600,11 @@ function showShareSheet(t, faultDesc, notes){
   const msg = buildWhatsappMsg(t, faultDesc, notes);
   const el = document.getElementById('sheet-content');
   const encoded = encodeURIComponent(msg);
+  const msgHtml = msg.replace(/\*([^*]+)\*/g,'<b>$1</b>');
   el.innerHTML = `
     <div class="sheet-title">✅ נשמר בהצלחה</div>
-    <div style="background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:12px;font-size:13px;line-height:1.7;white-space:pre-wrap;margin-bottom:16px;direction:rtl">${msg.replace(/\*/g,'<b>').replace(/\*/g,'</b>')}</div>
-    <a href="https://wa.me/?text=${encoded}" target="_blank" style="display:block;width:100%;padding:14px;background:#25D366;color:#fff;border:none;border-radius:11px;font:700 15px/1 'Heebo',sans-serif;cursor:pointer;text-align:center;text-decoration:none;box-sizing:border-box;margin-bottom:8px">
+    <div style="background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:12px;font-size:13px;line-height:1.8;white-space:pre-wrap;margin-bottom:16px;direction:rtl">${msgHtml}</div>
+    <a href="https://wa.me/?text=${encoded}" target="_blank" style="display:block;width:100%;padding:14px;background:#25D366;color:#fff;border-radius:11px;font:700 15px/1 'Heebo',sans-serif;text-align:center;text-decoration:none;box-sizing:border-box;margin-bottom:8px">
       📲 שלח לוואטסאפ
     </a>
     <button class="back-btn" onclick="closeSheet()">סגור</button>
