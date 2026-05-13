@@ -424,18 +424,15 @@ function floatNext(){
   if(F.action==='transfer'){ step=3; renderStep(); }
   else doSubmit(null);
 }
+
+function setItemCond(id,cond,btn){
   if(!F.itemCond) F.itemCond={};
   F.itemCond[id]=cond;
-  // עדכן ויזואלי — מצא את שני הכפתורים ברשומה
-  const row=btn.closest('div[style]');
+  const row=btn.closest('.item-cond-row');
   if(row){
-    const btns=row.querySelectorAll('button');
-    btns[0].style.borderColor=cond==='ok'?'var(--green)':'var(--border)';
-    btns[0].style.background=cond==='ok'?'var(--green-dim)':'var(--s1)';
-    btns[0].style.color=cond==='ok'?'var(--green)':'var(--text2)';
-    btns[1].style.borderColor=cond==='fault'?'var(--red)':'var(--border)';
-    btns[1].style.background=cond==='fault'?'var(--red-dim)':'var(--s1)';
-    btns[1].style.color=cond==='fault'?'var(--red)':'var(--text2)';
+    row.querySelectorAll('button').forEach(b=>b.classList.remove('ok-on','fault-on'));
+    if(cond==='ok') row.querySelector('.ok-btn').classList.add('ok-on');
+    else row.querySelector('.fault-btn').classList.add('fault-on');
   }
 }
 
@@ -551,23 +548,8 @@ function selTransferDest(p){
 
 function stepCondition(type){
   const backStep=type==='dispatch'?2:type==='transfer'?3:1;
-  // בנה רשימת פריטים לסימון מצב פרטני
-  let itemRows='';
-  F.items.filter(id=>!id.startsWith('שלט-')).forEach(id=>{
-    const cond=F.itemCond&&F.itemCond[id]||'ok';
-    itemRows+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border2)">
-      <span style="font-size:13px;font-weight:700">${id}</span>
-      <div style="display:flex;gap:6px">
-        <button style="padding:5px 12px;border-radius:7px;border:1.5px solid ${cond==='ok'?'var(--green)':'var(--border)'};background:${cond==='ok'?'var(--green-dim)':'var(--s1)'};color:${cond==='ok'?'var(--green)':'var(--text2)'};font:600 12px/1 Heebo,sans-serif;cursor:pointer" onclick="setItemCond('${id}','ok',this)">✓ תקין</button>
-        <button style="padding:5px 12px;border-radius:7px;border:1.5px solid ${cond==='fault'?'var(--red)':'var(--border)'};background:${cond==='fault'?'var(--red-dim)':'var(--s1)'};color:${cond==='fault'?'var(--red)':'var(--text2)'};font:600 12px/1 Heebo,sans-serif;cursor:pointer" onclick="setItemCond('${id}','fault',this)">✗ בלאי</button>
-      </div>
-    </div>`;
-  });
-  return`<div class="sheet-title">מצב הציוד</div>
-  <div style="margin-bottom:14px">${itemRows}</div>
-  <span class="slabel">הערות</span>
+  return`<div class="sheet-title">הערות</div>
   <textarea class="notes" id="notes-txt" placeholder="סוללות, ציוד נלווה..."></textarea>
-  <div id="fault-details-wrap"></div>
   <button class="next-btn" id="save-btn" style="margin-top:8px" onclick="doSubmit(this)">שמור פריטים</button>
   <button class="back-btn" onclick="step=${backStep};renderStep()">חזרה</button>`;
 }
