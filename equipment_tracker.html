@@ -350,7 +350,10 @@ function addToSelection(id){
   if(!F.items.includes(id)) F.items.push(id);
   if(id==='פקפק'){
     const qty=prompt('כמה פקפקים?');
-    if(qty&&!isNaN(qty)&&parseInt(qty)>0) F.itemQty=F.itemQty||{};F.itemQty&&(F.itemQty['פקפק']=parseInt(qty)||1);
+    if(qty&&!isNaN(qty)&&parseInt(qty)>0){
+      if(!F.itemQty) F.itemQty={};
+      F.itemQty['פקפק']=parseInt(qty)||1;
+    }
   }
   const partner=getPartner(id);
   if(partner && db.items[partner] && db.items[partner].status==='base' && !F.items.includes(partner))
@@ -666,44 +669,41 @@ function doSubmit(btn){
 }
 
 function buildWhatsappMsg(t, faultDesc, notes){
-  const action = F.action==='dispatch' ? '★ העמסה לשטח' : '★ החזרה לבסיס';
-  const loc = F.action==='dispatch' ? '● ' + F.person : '';
-
-  const shownPartners = new Set();
-  const lines = [];
-  F.items.forEach(id=>{
-    if(shownPartners.has(id)) return;
-    const partner = getPartner(id);
-    const isMain = !id.startsWith('שלט-');
-    const partnerSelected = partner && F.items.includes(partner);
-    if(isMain && partnerSelected){
-      shownPartners.add(partner);
-      const qty = (id==='פקפק'&&F.itemQty&&F.itemQty['פקפק']) ? ' x'+F.itemQty['פקפק'] : '';
-      lines.push('\u200F• '+id+' + שלט'+qty);
+  var RLM = '\u200F';
+  var eUp = '\uD83D\uDCE4', eDn = '\uD83D\uDCE5', ePin = '\uD83D\uDCCD', eOk = '\u2705', eWarn = '\u26A0\uFE0F', eNote = '\uD83D\uDCDD';
+  var action = F.action==='dispatch' ? RLM+'*'+eUp+' \u05D4\u05E2\u05DE\u05E1\u05D4 \u05DC\u05E9\u05D8\u05D7*' : RLM+'*'+eDn+' \u05D4\u05D7\u05D6\u05E8\u05D4 \u05DC\u05D1\u05E1\u05D9\u05E1*';
+  var loc = F.action==='dispatch' ? RLM+ePin+' '+F.person : '';
+  var shownPartners = {};
+  var byCat = {}, catOrder = [];
+  F.items.forEach(function(id){
+    if(shownPartners[id]) return;
+    var item = ITEMS.find(function(i){ return i.id===id; });
+    if(!item) return;
+    var cat = item.cat;
+    if(!byCat[cat]){ byCat[cat]=[]; catOrder.push(cat); }
+    var partner = getPartner(id);
+    var isMain = id.indexOf('\u05E9\u05DC\u05D8-')!==0;
+    var partnerSel = partner && F.items.indexOf(partner)>=0;
+    if(isMain && partnerSel){
+      shownPartners[partner]=true;
+      byCat[cat].push(RLM+'\u2022 '+id+' + \u05E9\u05DC\u05D8');
     } else {
-      const qty = (id==='פקפק'&&F.itemQty&&F.itemQty['פקפק']) ? ' x'+F.itemQty['פקפק'] : '';
-      const needsHeb = /^[A-Za-z0-9]/.test(id);
-      lines.push('\u200F• '+(needsHeb?'מס׳ ':'')+id+qty);
+      var qty = (id==='\u05E4\u05E7\u05E4\u05E7'&&F.itemQty&&F.itemQty['\u05E4\u05E7\u05E4\u05E7']) ? ' x'+F.itemQty['\u05E4\u05E7\u05E4\u05E7'] : '';
+      byCat[cat].push(RLM+'\u2022 '+id+qty);
     }
   });
-
-  const condLine = F.cond==='fault'
-    ? `⚠️ תקלה: ${faultDesc||'לא צוין'}`
-    : '✅ תקין';
-
-  const parts = [
-    '\u200F*'+action+'* | '+t,
-    loc ? '\u200F'+loc : '',
-    '',
-    lines.join('\n'),
-    '',
-    '\u200F'+condLine,
-    notes ? '\u200F📝 '+notes : ''
-  ].filter(function(x){return x!==null&&x!==undefined&&x!=='';});
-
-  return parts.join('\n').trim();
+  var parts = [action+' | '+t, loc, ''];
+  catOrder.forEach(function(cat){
+    if(byCat[cat].length){
+      parts.push(byCat[cat].join('\n'));
+      parts.push('');
+    }
+  });
+  var condLine = F.cond==='fault' ? eWarn+' \u05EA\u05E7\u05DC\u05D4' : eOk+' \u05EA\u05E7\u05D9\u05DF';
+  parts.push(RLM+condLine);
+  if(notes) parts.push(RLM+eNote+' '+notes);
+  return parts.join('\n').replace(/\n{3,}/g,'\n\n').trim();
 }
-
 function showShareSheet(t, faultDesc, notes){
   const msg = buildWhatsappMsg(t, faultDesc, notes);
   const el = document.getElementById('sheet-content');
