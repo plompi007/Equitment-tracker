@@ -565,43 +565,41 @@ function doSubmit(btn){
 }
 
 function buildWhatsappMsg(t, faultDesc, notes){
-  const action = F.action==='dispatch' ? '📤 *העמסה לשטח*' : '📥 *החזרה לבסיס*';
+  const action = F.action==='dispatch' ? '📤 העמסה לשטח' : '📥 החזרה לבסיס';
   const loc = F.action==='dispatch' ? `📌 ${F.person}` : '';
 
-  // קבץ פריטים — הסתר שלטים שהם סט של רחפן שנבחר
   const shownPartners = new Set();
   const lines = [];
   F.items.forEach(id=>{
     if(shownPartners.has(id)) return;
     const partner = getPartner(id);
-    // האם זה רחפן ראשי (לא שלט)
     const isMain = !id.startsWith('שלט-');
     const partnerSelected = partner && F.items.includes(partner);
     if(isMain && partnerSelected){
       shownPartners.add(partner);
       const qty = (id==='פקפק'&&F.itemQty&&F.itemQty['פקפק']) ? ` x${F.itemQty['פקפק']}` : '';
-      lines.push(`• ${id} + שלט${qty}`);
+      lines.push(`‏• ${id} + שלט${qty}`);
     } else {
       const qty = (id==='פקפק'&&F.itemQty&&F.itemQty['פקפק']) ? ` x${F.itemQty['פקפק']}` : '';
-      lines.push(`• ${id}${qty}`);
+      lines.push(`‏• ${id}${qty}`);
     }
   });
 
   const condLine = F.cond==='fault'
-    ? `⚠️ *תקלה:* ${faultDesc||'לא צוין'}`
+    ? `⚠️ תקלה: ${faultDesc||'לא צוין'}`
     : '✅ תקין';
 
   const parts = [
-    `${action} | ${t}`,
+    `‏*${action}* | ${t}`,
     loc,
     '',
     lines.join('\n'),
     '',
     condLine,
     notes ? `📝 ${notes}` : ''
-  ].filter(x=>x!==null&&x!==undefined);
+  ].filter(x=>x!==null&&x!==undefined&&x!=='');
 
-  return parts.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+  return parts.join('\n').trim();
 }
 
 function showShareSheet(t, faultDesc, notes){
