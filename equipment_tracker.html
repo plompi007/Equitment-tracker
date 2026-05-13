@@ -578,10 +578,10 @@ function buildWhatsappMsg(t, faultDesc, notes){
     if(isMain && partnerSelected){
       shownPartners.add(partner);
       const qty = (id==='פקפק'&&F.itemQty&&F.itemQty['פקפק']) ? ` x${F.itemQty['פקפק']}` : '';
-      lines.push(`‏• ${id} + שלט${qty}`);
+      lines.push(`\u200F• ${id} + שלט${qty}`);
     } else {
       const qty = (id==='פקפק'&&F.itemQty&&F.itemQty['פקפק']) ? ` x${F.itemQty['פקפק']}` : '';
-      lines.push(`‏• ${id}${qty}`);
+      lines.push(`\u200F• ${id}${qty}`);
     }
   });
 
@@ -590,13 +590,13 @@ function buildWhatsappMsg(t, faultDesc, notes){
     : '✅ תקין';
 
   const parts = [
-    `‏*${action}* | ${t}`,
-    loc,
+    `\u200F*${action}* | ${t}`,
+    loc ? `\u200F${loc}` : '',
     '',
     lines.join('\n'),
     '',
-    condLine,
-    notes ? `📝 ${notes}` : ''
+    `\u200F${condLine}`,
+    notes ? `\u200F📝 ${notes}` : ''
   ].filter(x=>x!==null&&x!==undefined&&x!=='');
 
   return parts.join('\n').trim();
