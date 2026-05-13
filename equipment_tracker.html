@@ -530,12 +530,23 @@ function stepReturnItems(){
 
 // שלב העברה — בחירת מיקום יעד
 function stepTransferDest(){
-  const btns=PEOPLE.map(p=>`<button class="person-btn${F.transferDest===p?' on':''}" onclick="F.transferDest='${p}';document.querySelectorAll('.person-btn').forEach(b=>b.className='person-btn'+(b.textContent==='${p}'?' on':''));document.getElementById('next-dest').disabled=false">${p}</button>`).join('');
+  let btns='';
+  PEOPLE.forEach(p=>{
+    const on=F.transferDest===p;
+    btns+=`<button class="person-btn${on?' on':''}" onclick="selTransferDest('${p}')">${p}</button>`;
+  });
   return`<div class="sheet-title">לאן מועברים?</div>
   <div class="person-grid">${btns}</div>
-  <input class="person-other" id="dest-inp" placeholder="מיקום אחר..." value="${F.transferDest&&!PEOPLE.includes(F.transferDest)?F.transferDest:''}" oninput="F.transferDest=this.value.trim();document.getElementById('next-dest').disabled=!F.transferDest">
-  <button class="next-btn" id="next-dest" onclick="step=4;renderStep()" ${F.transferDest?'':'disabled'}>המשך</button>
+  <input class="person-other" id="dest-inp" placeholder="מיקום אחר..." value="${F.transferDest&&!PEOPLE.includes(F.transferDest)?F.transferDest:''}" oninput="selTransferDest(this.value.trim())">
+  <button class="next-btn" id="next-dest" onclick="doSubmit(null)" ${F.transferDest?'':'disabled'}>שמור</button>
   <button class="back-btn" onclick="step=2;renderStep()">חזרה</button>`;
+}
+
+function selTransferDest(p){
+  F.transferDest=p;
+  document.querySelectorAll('.person-btn').forEach(b=>{b.className='person-btn'+(b.textContent===p?' on':'');});
+  const btn=document.getElementById('next-dest');
+  if(btn) btn.disabled=!p;
 }
 
 function stepCondition(type){
