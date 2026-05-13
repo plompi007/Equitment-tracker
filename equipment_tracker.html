@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>מעקב ציוד</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap');
@@ -663,8 +666,8 @@ function doSubmit(btn){
 }
 
 function buildWhatsappMsg(t, faultDesc, notes){
-  const action = F.action==='dispatch' ? '📤 העמסה לשטח' : '📥 החזרה לבסיס';
-  const loc = F.action==='dispatch' ? `📌 ${F.person}` : '';
+  const action = F.action==='dispatch' ? '★ העמסה לשטח' : '★ החזרה לבסיס';
+  const loc = F.action==='dispatch' ? '● ' + F.person : '';
 
   const shownPartners = new Set();
   const lines = [];
@@ -675,11 +678,12 @@ function buildWhatsappMsg(t, faultDesc, notes){
     const partnerSelected = partner && F.items.includes(partner);
     if(isMain && partnerSelected){
       shownPartners.add(partner);
-      const qty = (id==='פקפק'&&F.itemQty&&F.itemQty['פקפק']) ? ` x${F.itemQty['פקפק']}` : '';
-      lines.push(`\u200F• ${id} + שלט${qty}`);
+      const qty = (id==='פקפק'&&F.itemQty&&F.itemQty['פקפק']) ? ' x'+F.itemQty['פקפק'] : '';
+      lines.push('\u200F• '+id+' + שלט'+qty);
     } else {
-      const qty = (id==='פקפק'&&F.itemQty&&F.itemQty['פקפק']) ? ` x${F.itemQty['פקפק']}` : '';
-      lines.push(`\u200F• ${id}${qty}`);
+      const qty = (id==='פקפק'&&F.itemQty&&F.itemQty['פקפק']) ? ' x'+F.itemQty['פקפק'] : '';
+      const needsHeb = /^[A-Za-z0-9]/.test(id);
+      lines.push('\u200F• '+(needsHeb?'מס׳ ':'')+id+qty);
     }
   });
 
@@ -688,14 +692,14 @@ function buildWhatsappMsg(t, faultDesc, notes){
     : '✅ תקין';
 
   const parts = [
-    `\u200F*${action}* | ${t}`,
-    loc ? `\u200F${loc}` : '',
+    '\u200F*'+action+'* | '+t,
+    loc ? '\u200F'+loc : '',
     '',
     lines.join('\n'),
     '',
-    `\u200F${condLine}`,
-    notes ? `\u200F📝 ${notes}` : ''
-  ].filter(x=>x!==null&&x!==undefined&&x!=='');
+    '\u200F'+condLine,
+    notes ? '\u200F📝 '+notes : ''
+  ].filter(function(x){return x!==null&&x!==undefined&&x!=='';});
 
   return parts.join('\n').trim();
 }
