@@ -163,6 +163,10 @@ textarea.notes:focus{border-color:var(--accent)}
   <div class="sheet-handle"></div>
   <div class="steps"><div class="step-dot" id="d0"></div><div class="step-dot" id="d1"></div><div class="step-dot" id="d2"></div></div>
   <div id="sheet-content"></div>
+  <!-- כפתור המשך צף -->
+  <div id="float-next-wrap" style="display:none;position:sticky;bottom:0;background:var(--s2);padding:10px 0 4px;margin-top:8px">
+    <button class="next-btn" id="float-next-btn" disabled onclick="floatNext()">המשך</button>
+  </div>
 </div>
 </div>
 
@@ -356,12 +360,12 @@ function removeFromSelection(id){
 }
 
 // ── FLOW ──
-let F={action:'dispatch',person:'',items:[],cond:'ok'};
+let F={action:'dispatch',person:'',items:[],cond:'ok',itemCond:{},transferDest:'',itemQty:{}};
 let step=0;
 const STEPS_DISPATCH=3, STEPS_RETURN=2;
 
 function startFlow(preItem,preAction){
-  F={action:preAction||'dispatch',person:'',items:preItem?[preItem]:[],cond:'ok'};
+  F={action:preAction||'dispatch',person:'',items:preItem?[preItem]:[],cond:'ok',itemCond:{},transferDest:'',itemQty:{}};
   step=preItem?(preAction==='return'?1:1):0;
   openSheet();
 }
@@ -386,31 +390,87 @@ function updateDots(){
 function renderStep(){
   updateDots();
   const el=document.getElementById('sheet-content');
-  if(F.action==='dispatch'){
+  if(F.action==='transfer'){
+    if(step===0) el.innerHTML=stepAction();
+    else if(step===1) el.innerHTML=stepPerson();
+    else if(step===2) el.innerHTML=stepTransferFromItems();
+    else if(step===3) el.innerHTML=stepTransferDest();
+  } else if(F.action==='dispatch'){
     if(step===0) el.innerHTML=stepAction();
     else if(step===1) el.innerHTML=stepPerson();
     else if(step===2) el.innerHTML=stepItems();
-    else if(step===3) el.innerHTML=stepCondition('dispatch');
   } else {
     if(step===0) el.innerHTML=stepAction();
     else if(step===1) el.innerHTML=stepReturnItems();
-    else if(step===2) el.innerHTML=stepCondition('return');
+  }
+
+  // כפתור המשך צף
+  const floatWrap=document.getElementById('float-next-wrap');
+  if(floatWrap){
+    const showFloat=(F.action==='dispatch'&&step===2)||(F.action==='return'&&step===1)||(F.action==='transfer'&&step===2);
+    if(showFloat){
+      const n=F.items.length;
+      floatWrap.style.display='block';
+      document.getElementById('float-next-btn').textContent=n?`שמור (${n} פריטים)`:'בחר פריטים';
+      document.getElementById('float-next-btn').disabled=!n;
+    } else {
+      floatWrap.style.display='none';
+    }
   }
   attachListeners();
 }
 
+function floatNext(){
+  if(F.action==='transfer'){ step=3; renderStep(); }
+  else doSubmit(null);
+}
+  if(!F.itemCond) F.itemCond={};
+  F.itemCond[id]=cond;
+  // עדכן ויזואלי — מצא את שני הכפתורים ברשומה
+  const row=btn.closest('div[style]');
+  if(row){
+    const btns=row.querySelectorAll('button');
+    btns[0].style.borderColor=cond==='ok'?'var(--green)':'var(--border)';
+    btns[0].style.background=cond==='ok'?'var(--green-dim)':'var(--s1)';
+    btns[0].style.color=cond==='ok'?'var(--green)':'var(--text2)';
+    btns[1].style.borderColor=cond==='fault'?'var(--red)':'var(--border)';
+    btns[1].style.background=cond==='fault'?'var(--red-dim)':'var(--s1)';
+    btns[1].style.color=cond==='fault'?'var(--red)':'var(--text2)';
+  }
+}
+
+function stepTransferFromItems(){
+  const outItems=ITEMS.filter(i=>(db.items[i.id].status==='out'||db.items[i.id].status==='fault')&&db.items[i.id].where===F.person);
+  if(!outItems.length) return`<div class="sheet-title">העברה</div><div class="empty">אין ציוד ב${F.person}</div><button class="back-btn" onclick="step=1;renderStep()">חזרה</button>`;
+  let html=`<div class="sheet-title">מה מועבר מ${F.person}?</div><div style="height:60px"></div>`;
+  html+=`<div class="check-grid">`;
+  outItems.forEach(item=>{
+    const on=F.items.includes(item.id);
+    html+=`<div class="check-item${on?' on':''}" onclick="toggleItem('${item.id}')">
+      <div class="check-box${on?' on':''}" id="cb-${item.id}"></div>
+      <div style="flex:1"><div class="check-lbl">${item.id}</div></div>
+    </div>`;
+  });
+  html+=`</div><div style="height:70px"></div>`;
+  return html;
+}
+
 function stepAction(){
   return`<div class="sheet-title">מה עושים?</div>
-  <div class="cond-row" style="margin-bottom:20px">
-    <button class="cond-btn ${F.action==='dispatch'?'ok-on':''}" id="act-d" onclick="F.action='dispatch';document.getElementById('act-d').className='cond-btn ok-on';document.getElementById('act-r').className='cond-btn'">↑ העמסה לשטח</button>
-    <button class="cond-btn ${F.action==='return'?'ok-on':''}" id="act-r" onclick="F.action='return';document.getElementById('act-r').className='cond-btn ok-on';document.getElementById('act-d').className='cond-btn'">↓ החזרה לבסיס</button>
+  <div class="cond-row" style="margin-bottom:8px">
+    <button class="cond-btn ${F.action==='dispatch'?'ok-on':''}" id="act-d" onclick="F.action='dispatch';renderStep()">↑ העמסה</button>
+    <button class="cond-btn ${F.action==='return'?'ok-on':''}" id="act-r" onclick="F.action='return';renderStep()">↓ החזרה</button>
+  </div>
+  <div style="margin-bottom:20px">
+    <button class="cond-btn" style="width:100%;${F.action==='transfer'?'border-color:var(--accent);background:var(--accent-dim);color:var(--accent)':''}" id="act-t" onclick="F.action='transfer';renderStep()">↔ העברה בין מיקומים</button>
   </div>
   <button class="next-btn" onclick="step=1;renderStep()">המשך</button>`;
 }
 
 function stepPerson(){
+  const title = F.action==='transfer' ? 'מאיפה?' : 'לאן יורד הציוד?';
   const btns=PEOPLE.map(p=>`<button class="person-btn${F.person===p?' on':''}" onclick="selPerson('${p}')">${p}</button>`).join('');
-  return`<div class="sheet-title">לאן יורד הציוד?</div>
+  return`<div class="sheet-title">${title}</div>
   <div class="person-grid">${btns}</div>
   <input class="person-other" id="other-inp" placeholder="מיקום אחר / שם..." value="${PEOPLE.includes(F.person)?'':F.person}" oninput="F.person=this.value.trim();updateNext1()">
   <button class="next-btn" id="next1" onclick="step=2;renderStep()" ${F.person?'':'disabled'}>המשך</button>
@@ -423,9 +483,10 @@ const PARTNER_CATS=new Set(['שלטי משימה','שלטי אווטה','שלט�
 function stepItems(){
   const cats=[...new Set(ITEMS.map(i=>i.cat))].filter(c=>!PARTNER_CATS.has(c));
   let html=`<div class="sheet-title">פריטים → ${F.person}</div>
-  <div style="font-size:11px;color:var(--accent);margin-bottom:12px;background:var(--accent-dim);padding:7px 10px;border-radius:8px;font-weight:600">סימון רחפן = שלט יוצא אוטומטית כסט</div>`;
+  <div style="font-size:11px;color:var(--accent);margin-bottom:12px;background:var(--accent-dim);padding:7px 10px;border-radius:8px;font-weight:600">סימון רחפן = שלט יוצא אוטומטית כסט</div>
+  <div style="height:60px"></div>`;
   cats.forEach(cat=>{
-    const inCat=ITEMS.filter(i=>i.cat===cat&&db.items[i.id].status==='base');
+    const inCat=ITEMS.filter(i=>i.cat===cat&&db.items[i.id].status==='base'&&!db.items[i.id].worn);
     if(!inCat.length) return;
     html+=`<div class="cat-check-hdr"><span>${cat}</span><button onclick="toggleCat('${cat}')">כולם</button></div>`;
     html+=`<div class="check-grid">`;
@@ -441,10 +502,7 @@ function stepItems(){
     });
     html+=`</div>`;
   });
-  const n=F.items.length;
-  html+=`<div style="height:12px"></div>
-  <button class="next-btn" id="next2" onclick="step=3;renderStep()" ${n?'':'disabled'}>${n?'המשך ('+n+' פריטים)':'המשך'}</button>
-  <button class="back-btn" onclick="step=1;renderStep()">חזרה</button>`;
+  html+=`<div style="height:70px"></div>`;
   return html;
 }
 
@@ -453,7 +511,7 @@ function stepReturnItems(){
   if(!outItems.length) return`<div class="sheet-title">החזרה</div><div class="empty">אין ציוד בשטח</div><button class="back-btn" onclick="step=0;renderStep()">חזרה</button>`;
   const byP={};
   outItems.forEach(item=>{const w=db.items[item.id].where||'לא ידוע';if(!byP[w])byP[w]=[];byP[w].push(item);});
-  let html=`<div class="sheet-title">מה חוזר?</div>`;
+  let html=`<div class="sheet-title">מה חוזר?</div><div style="height:60px"></div>`;
   Object.keys(byP).forEach(p=>{
     html+=`<div class="cat-check-hdr"><span>📌 ${p}</span><button onclick="togglePersonReturn('${p}')">כולם</button></div>`;
     html+=`<div class="check-grid">`;
@@ -466,24 +524,39 @@ function stepReturnItems(){
     });
     html+=`</div>`;
   });
-  const n=F.items.length;
-  html+=`<div style="height:12px"></div>
-  <button class="next-btn" id="next1r" onclick="step=2;renderStep()" ${n?'':'disabled'}>${n?'המשך ('+n+' פריטים)':'המשך'}</button>
-  <button class="back-btn" onclick="step=0;renderStep()">חזרה</button>`;
+  html+=`<div style="height:70px"></div>`;
   return html;
 }
 
+// שלב העברה — בחירת מיקום יעד
+function stepTransferDest(){
+  const btns=PEOPLE.map(p=>`<button class="person-btn${F.transferDest===p?' on':''}" onclick="F.transferDest='${p}';document.querySelectorAll('.person-btn').forEach(b=>b.className='person-btn'+(b.textContent==='${p}'?' on':''));document.getElementById('next-dest').disabled=false">${p}</button>`).join('');
+  return`<div class="sheet-title">לאן מועברים?</div>
+  <div class="person-grid">${btns}</div>
+  <input class="person-other" id="dest-inp" placeholder="מיקום אחר..." value="${F.transferDest&&!PEOPLE.includes(F.transferDest)?F.transferDest:''}" oninput="F.transferDest=this.value.trim();document.getElementById('next-dest').disabled=!F.transferDest">
+  <button class="next-btn" id="next-dest" onclick="step=4;renderStep()" ${F.transferDest?'':'disabled'}>המשך</button>
+  <button class="back-btn" onclick="step=2;renderStep()">חזרה</button>`;
+}
+
 function stepCondition(type){
-  const backStep=type==='dispatch'?2:1;
+  const backStep=type==='dispatch'?2:type==='transfer'?3:1;
+  // בנה רשימת פריטים לסימון מצב פרטני
+  let itemRows='';
+  F.items.filter(id=>!id.startsWith('שלט-')).forEach(id=>{
+    const cond=F.itemCond&&F.itemCond[id]||'ok';
+    itemRows+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border2)">
+      <span style="font-size:13px;font-weight:700">${id}</span>
+      <div style="display:flex;gap:6px">
+        <button style="padding:5px 12px;border-radius:7px;border:1.5px solid ${cond==='ok'?'var(--green)':'var(--border)'};background:${cond==='ok'?'var(--green-dim)':'var(--s1)'};color:${cond==='ok'?'var(--green)':'var(--text2)'};font:600 12px/1 Heebo,sans-serif;cursor:pointer" onclick="setItemCond('${id}','ok',this)">✓ תקין</button>
+        <button style="padding:5px 12px;border-radius:7px;border:1.5px solid ${cond==='fault'?'var(--red)':'var(--border)'};background:${cond==='fault'?'var(--red-dim)':'var(--s1)'};color:${cond==='fault'?'var(--red)':'var(--text2)'};font:600 12px/1 Heebo,sans-serif;cursor:pointer" onclick="setItemCond('${id}','fault',this)">✗ בלאי</button>
+      </div>
+    </div>`;
+  });
   return`<div class="sheet-title">מצב הציוד</div>
-  <span class="slabel">מצב</span>
-  <div class="cond-row">
-    <button class="cond-btn ok-on" id="c-ok" onclick="setCond('ok')">✓ תקין</button>
-    <button class="cond-btn" id="c-fault" onclick="setCond('fault')">✗ תקלה</button>
-  </div>
-  <textarea class="fault-field" id="fault-text" placeholder="תאר את התקלה..."></textarea>
+  <div style="margin-bottom:14px">${itemRows}</div>
   <span class="slabel">הערות</span>
   <textarea class="notes" id="notes-txt" placeholder="סוללות, ציוד נלווה..."></textarea>
+  <div id="fault-details-wrap"></div>
   <button class="next-btn" id="save-btn" style="margin-top:8px" onclick="doSubmit(this)">שמור פריטים</button>
   <button class="back-btn" onclick="step=${backStep};renderStep()">חזרה</button>`;
 }
@@ -513,10 +586,11 @@ function toggleItem(id){
       if(row) row.className='check-item'+(on?' on':'');
     }
   });
-  const n2=document.getElementById('next2');
-  if(n2){n2.disabled=!F.items.length;n2.textContent=F.items.length?'המשך ('+F.items.length+' פריטים)':'המשך';}
-  const n1r=document.getElementById('next1r');
-  if(n1r){n1r.disabled=!F.items.length;n1r.textContent=F.items.length?'המשך ('+F.items.length+' פריטים)':'המשך';}
+  const floatBtn=document.getElementById('float-next-btn');
+  if(floatBtn){
+    floatBtn.disabled=!F.items.length;
+    floatBtn.textContent=F.items.length?`המשך (${F.items.length} פריטים)`:'המשך';
+  }
 }
 function toggleCat(cat){
   const inCat=ITEMS.filter(i=>i.cat===cat&&db.items[i.id].status==='base').map(i=>i.id);
@@ -541,27 +615,58 @@ function setCond(c){
   if(fa) fa.className='cond-btn'+(c==='fault'?' fault-on':'');
   if(ft) ft.className='fault-field'+(c==='fault'?' on':'');
 }
+function openItemMenu(id){
+  const s=db.items[id];
+  const isWorn=s.worn===true;
+  const el=document.getElementById('sheet-content');
+  el.innerHTML=`
+    <div class="sheet-title">${id}</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:16px">${isWorn?'מסומן כבלאי':'בבסיס'}</div>
+    ${!isWorn?`<button class="next-btn" style="margin-bottom:8px" onclick="startFlow('${id}','dispatch')">↑ העמסה לשטח</button>`:''}
+    <button class="next-btn" style="background:${isWorn?'var(--green)':'var(--red)'};margin-bottom:8px" onclick="toggleWorn('${id}')">
+      ${isWorn?'✓ החזר לתקין':'✗ סמן כבלאי'}
+    </button>
+    <button class="back-btn" onclick="closeSheet()">סגור</button>
+  `;
+  document.getElementById('sheet-bg').classList.add('on');
+}
+
+function toggleWorn(id){
+  if(!db.items[id]) return;
+  db.items[id].worn=!db.items[id].worn;
+  save();renderAll();closeSheet();
+}
+
 function doSubmit(btn){
   const t=now();
-  const faultDesc=(document.getElementById('fault-text')||{}).value||'';
   const notes=(document.getElementById('notes-txt')||{}).value||'';
   if(!db.log||!Array.isArray(db.log)) db.log=[];
   if(!db.items) db.items={};
-  F.items.forEach(id=>{
-    const qtyNote=(id==='פקפק'&&F.itemQty&&F.itemQty['פקפק'])?`כמות: ${F.itemQty['פקפק']}`:'';
-    const itemNotes=[qtyNote,notes].filter(Boolean).join(' | ');
-    if(F.action==='dispatch'){
-      db.items[id]={status:F.cond==='fault'?'fault':'out',where:F.person,ts:t,notes:itemNotes,faultDesc};
-      db.log.unshift({id,action:'out',person:F.person,cond:F.cond,faultDesc,notes:itemNotes,ts:t});
-    } else {
-      db.items[id]={status:F.cond==='fault'?'fault':'base',where:'',ts:t,notes:itemNotes,faultDesc};
-      db.log.unshift({id,action:'in',person:'',cond:F.cond,faultDesc,notes:itemNotes,ts:t});
-    }
-  });
+
+  if(F.action==='transfer'){
+    // העברה — שנה מיקום בלי לסמן חזרה
+    F.items.forEach(id=>{
+      const cond=F.itemCond&&F.itemCond[id]||'ok';
+      db.items[id]={...db.items[id], status:cond==='fault'?'fault':'out', where:F.transferDest, ts:t, notes};
+      db.log.unshift({id,action:'transfer',person:F.transferDest,from:F.person,cond,notes,ts:t});
+    });
+  } else {
+    F.items.forEach(id=>{
+      const cond=F.itemCond&&F.itemCond[id]||F.cond||'ok';
+      const itemNotes=(id==='פקפק'&&F.itemQty&&F.itemQty['פקפק'])?`כמות: ${F.itemQty['פקפק']}${notes?' | '+notes:''}`:(notes||'');
+      if(F.action==='dispatch'){
+        db.items[id]={status:cond==='fault'?'fault':'out',where:F.person,ts:t,notes:itemNotes,faultDesc:''};
+        db.log.unshift({id,action:'out',person:F.person,cond,notes:itemNotes,ts:t});
+      } else {
+        db.items[id]={status:cond==='fault'?'fault':'base',where:'',ts:t,notes:itemNotes,faultDesc:''};
+        db.log.unshift({id,action:'in',person:'',cond,notes:itemNotes,ts:t});
+      }
+    });
+  }
   db.log=db.log.slice(0,300);
   save();
   renderAll();
-  showShareSheet(t,faultDesc,notes);
+  showShareSheet(t,'',notes);
 }
 
 function buildWhatsappMsg(t, faultDesc, notes){
@@ -640,12 +745,20 @@ function renderInventory(){
     sec.innerHTML=`<div class="cat-hdr"><span>${cat}</span><span style="color:var(--text3)">${items.length}</span></div>`;
     items.forEach(item=>{
       const s=db.items[item.id];
-      const sl=s.status==='base'?'בבסיס':s.status==='out'?'בשטח':'תקלה';
-      const bc=s.status==='base'?'b-base':s.status==='out'?'b-out':'b-fault';
+      const isWorn = s.worn===true;
+      const sl=isWorn?'בלאי':s.status==='base'?'בבסיס':s.status==='out'?'בשטח':'תקלה';
+      const bc=isWorn?'b-fault':s.status==='base'?'b-base':s.status==='out'?'b-out':'b-fault';
       const row=document.createElement('div');
-      row.className=`item-row ${s.status}`;
+      row.className=`item-row ${isWorn?'fault':s.status}`;
       row.innerHTML=`<div class="item-id">${item.id}</div><div class="item-where">${s.where||''}</div><div class="item-badge ${bc}">${sl}</div>`;
-      row.onclick=()=>startFlow(item.id,s.status==='base'?'dispatch':'return');
+      row.onclick=()=>{
+        if(isWorn||s.status==='base'){
+          // הצג תפריט קצר
+          openItemMenu(item.id);
+        } else {
+          startFlow(item.id,'return');
+        }
+      };
       sec.appendChild(row);
     });
     el.appendChild(sec);
