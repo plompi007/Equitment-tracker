@@ -275,8 +275,10 @@ const ITEMS=[
   {id:'260301900',cat:'רחפן עטלף 5'},{id:'260301903',cat:'רחפן עטלף 5'},{id:'260301919',cat:'רחפן עטלף 5'},
   {id:'260301920',cat:'רחפן עטלף 5'},{id:'260301923',cat:'רחפן עטלף 5'},{id:'260301943',cat:'רחפן עטלף 5'},
   {id:'260301947',cat:'רחפן עטלף 5'},{id:'260301950',cat:'רחפן עטלף 5'},
+  // רחפני אטטי
+  {id:'א-187',cat:'רחפני אטטי'},{id:'א-1310',cat:'רחפני אטטי'},{id:'א-1396',cat:'רחפני אטטי'},{id:'א-1398',cat:'רחפני אטטי'},
   // כלי טיס זיק
-  {id:'Z-145',cat:'כלי טיס זיק'},{id:'Z-187',cat:'כלי טיס זיק'},
+  {id:'Z-145',cat:'כלי טיס זיק'},
   // ציוד נוסף
   {id:'גנרטור-1',cat:'ציוד נוסף'},
   {id:'פקפק',cat:'ציוד נוסף'},
@@ -909,7 +911,7 @@ const DAY_CATS = [
 // מיפוי קטגוריה → מה לספור מהמלאי
 const CAT_TO_ITEM_CAT = {
   'mission': 'רחפני משימה',
-  'atati':   'רחפני אווטה',
+  'atati':   'רחפני אטטי',
   'alpha':   'רחפני אלפא',
   'evomax':  'מתקני הטלה EVOMAX',
   'bomrang': 'מתקני הטלה אלפא',
@@ -1085,6 +1087,7 @@ function saveDayEdit(){
     const v=parseInt(document.getElementById('qty-'+c.key).value)||0;
     if(v) qty[c.key]=v;
   });
+  db.day.quantities=qty;
   db.day.staff=(document.getElementById('day-staff')||{}).value||'';
   db.day.classes=(document.getElementById('day-classes')||{}).value||'';
   db.day.notes=(document.getElementById('day-notes')||{}).value||'';
