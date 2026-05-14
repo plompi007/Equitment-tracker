@@ -305,7 +305,9 @@ function initFirebase(){
     fbRef.on('value',(snapshot)=>{
       const data=snapshot.val();
       if(data){
+        const prevDay=db.day;
         db=data;
+        if(!db.day && prevDay) db.day=prevDay;
         if(!db.log) db.log=[];
         if(!db.items) db.items={};
         ITEMS.forEach(i=>{if(!db.items[i.id])db.items[i.id]={status:'base',where:'',ts:'',notes:'',faultDesc:''};});
@@ -336,6 +338,9 @@ function save(){
 
 function load(){
   try{const s=localStorage.getItem(KEY);if(s)db=JSON.parse(s);}catch(e){}
+  if(!db.log) db.log=[];
+  if(!db.items) db.items={};
+  if(!db.day) db.day={};
   ITEMS.forEach(i=>{if(!db.items[i.id])db.items[i.id]={status:'base',where:'',ts:'',notes:'',faultDesc:''};});
   renderAll();
 }
