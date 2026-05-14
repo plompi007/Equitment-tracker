@@ -126,6 +126,23 @@ textarea.notes:focus{border-color:var(--accent)}
 .next-btn:active{opacity:.85}
 .next-btn:disabled{opacity:.35;cursor:default}
 .back-btn{width:100%;padding:11px;margin-top:7px;background:none;color:var(--text2);border:1px solid var(--border);border-radius:11px;font:600 13px/1 'Heebo',sans-serif;cursor:pointer}
+.day-section{background:var(--s1);border:1px solid var(--border2);border-radius:10px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.day-section-title{font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:10px}
+.qty-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border2)}
+.qty-row:last-child{border-bottom:none}
+.qty-label{font-size:14px;font-weight:600;flex:1}
+.qty-progress{font-size:12px;font-weight:700;padding:3px 8px;border-radius:6px;margin-right:8px}
+.qty-ok{background:var(--green-dim);color:var(--green)}
+.qty-warn{background:var(--yellow-dim);color:var(--yellow)}
+.qty-over{background:var(--red-dim);color:var(--red)}
+.task-item{display:flex;align-items:flex-start;gap:10px;padding:9px 4px;border-bottom:1px solid var(--border2);cursor:pointer}
+.task-item:last-child{border-bottom:none}
+.task-check{width:22px;height:22px;border-radius:6px;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:1px;transition:all .12s}
+.task-check.done{background:var(--green);border-color:var(--green)}
+.task-check.done::after{content:'✓';color:#fff;font-size:12px;font-weight:700}
+.task-text{font-size:14px;flex:1;line-height:1.4}
+.task-text.done{text-decoration:line-through;color:var(--text3)}
+.station-badge{display:inline-block;background:var(--accent-dim);color:var(--accent);font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;margin:3px 3px 3px 0}
 </style>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -147,6 +164,7 @@ textarea.notes:focus{border-color:var(--accent)}
 </div>
 <div class="tabs">
   <button class="tab on" onclick="showPage('inventory',this)">מלאי</button>
+  <button class="tab" onclick="showPage('day',this)">יום</button>
   <button class="tab" onclick="showPage('out',this)">בשטח</button>
   <button class="tab" onclick="showPage('log',this)">יומן</button>
 </div>
@@ -160,6 +178,7 @@ textarea.notes:focus{border-color:var(--accent)}
     </div>
     <div id="inventory-list"></div>
   </div>
+  <div class="page" id="page-day"><div id="day-content"></div></div>
   <div class="page" id="page-out"><div id="out-list"></div></div>
   <div class="page" id="page-log"><div id="log-list"></div></div>
 </div>
@@ -742,7 +761,7 @@ function showShareSheet(t, faultDesc, notes){
 }
 
 // ── RENDER ──
-function renderAll(){renderInventory();renderOut();renderLog();renderHeader();}
+function renderAll(){renderInventory();renderOut();renderLog();renderHeader();renderDay();}
 function renderHeader(){
   let o=0,f=0;
   ITEMS.forEach(i=>{const s=db.items[i.id].status;if(s==='out')o++;if(s==='fault')f++;});
@@ -834,6 +853,7 @@ function showPage(name,btn){
   btn.classList.add('on');
   const sb=document.getElementById('search-box');
   if(sb)sb.style.display=name==='inventory'?'':'none';
+  if(name==='day') renderDay();
 }
 
 const APP_PASS = 'balar2026';
@@ -870,6 +890,179 @@ function doLogin(){
     document.getElementById('pass-inp').value='';
     document.getElementById('pass-inp').focus();
   }
+}
+
+// ── DAY TAB ──
+// מבנה db.day = { date, stations[], quantities:{cat:n}, tasks:[{text,done}], arrivalTime }
+
+const DAY_CATS = [
+  {key:'mission', label:'רחפני משימה'},
+  {key:'atati',   label:'רחפני אטטי'},
+  {key:'alpha',   label:'רחפני אלפא'},
+  {key:'evomax',  label:'מתקני EVOMAX'},
+  {key:'bomrang', label:'מתקני בומרנג'},
+  {key:'kb',      label:'מתקני כדור ברזל'},
+  {key:'fpv',     label:'ציוד FPV'},
+  {key:'other',   label:'ציוד נוסף'},
+];
+
+// מיפוי קטגוריה → מה לספור מהמלאי
+const CAT_TO_ITEM_CAT = {
+  'mission': 'רחפני משימה',
+  'atati':   'רחפני אווטה',
+  'alpha':   'רחפני אלפא',
+  'evomax':  'מתקני הטלה EVOMAX',
+  'bomrang': 'מתקני הטלה אלפא',
+  'fpv':     'FLYCART3',
+};
+
+function countOutByCat(itemCat){
+  return ITEMS.filter(i=>i.cat===itemCat&&db.items[i.id]&&db.items[i.id].status==='out').length;
+}
+
+function renderDay(){
+  const el=document.getElementById('day-content');
+  if(!el) return;
+  const day=db.day||{};
+  const isAdmin=localStorage.getItem('uav_admin')==='1';
+
+  let html='<div style="padding:12px">';
+
+  // כפתור עריכה
+  html+=`<button onclick="openDayEdit()" style="width:100%;padding:11px;background:none;border:1.5px dashed var(--border);border-radius:10px;font:600 13px/1 Heebo,sans-serif;color:var(--text2);cursor:pointer;margin-bottom:12px">
+    ✏️ ${day.date?'עדכן יום':'הגדר יום חדש'}
+  </button>`;
+
+  if(!day.date){
+    html+='<div class="empty">אין נתוני יום — לחץ "הגדר יום חדש"</div>';
+    html+='</div>';
+    el.innerHTML=html;
+    return;
+  }
+
+  // כותרת
+  html+=`<div class="day-section">
+    <div style="font-size:16px;font-weight:800;margin-bottom:4px">${day.date||''}</div>
+    ${day.arrivalTime?`<div style="font-size:13px;color:var(--text2)">הגעה: ${day.arrivalTime}</div>`:''}
+  </div>`;
+
+  // עמדות
+  if(day.stations&&day.stations.length){
+    html+=`<div class="day-section"><div class="day-section-title">עמדות פעילות</div>`;
+    html+=day.stations.map(s=>`<span class="station-badge">${s}</span>`).join('');
+    html+='</div>';
+  }
+
+  // כמויות מכולה אדומה
+  const hasQty=DAY_CATS.some(c=>day.quantities&&day.quantities[c.key]);
+  if(hasQty){
+    html+=`<div class="day-section"><div class="day-section-title">מכולה אדומה — מצב</div>`;
+    DAY_CATS.forEach(function(c){
+      const needed=parseInt((day.quantities||{})[c.key])||0;
+      if(!needed) return;
+      const itemCat=CAT_TO_ITEM_CAT[c.key];
+      const dispatched=itemCat?countOutByCat(itemCat):0;
+      const pct=dispatched/needed;
+      const cls=dispatched>=needed?'qty-ok':dispatched>0?'qty-warn':'qty-over';
+      html+=`<div class="qty-row">
+        <div class="qty-label">${c.label}</div>
+        <div class="qty-progress ${cls}">${dispatched}/${needed}</div>
+      </div>`;
+    });
+    html+='</div>';
+  }
+
+  // משימות
+  if(day.tasks&&day.tasks.length){
+    const done=day.tasks.filter(t=>t.done).length;
+    html+=`<div class="day-section">
+      <div class="day-section-title">משימות בוקר — ${done}/${day.tasks.length} בוצעו</div>`;
+    day.tasks.forEach(function(task,i){
+      html+=`<div class="task-item" onclick="toggleTask(${i})">
+        <div class="task-check${task.done?' done':''}"></div>
+        <div class="task-text${task.done?' done':''}">${task.text}</div>
+      </div>`;
+    });
+    html+='</div>';
+  }
+
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+function toggleTask(idx){
+  if(!db.day||!db.day.tasks) return;
+  db.day.tasks[idx].done=!db.day.tasks[idx].done;
+  save();renderDay();
+}
+
+function openDayEdit(){
+  const day=db.day||{};
+  const el=document.getElementById('sheet-content');
+
+  // בנה שדות כמויות
+  let qtyFields=DAY_CATS.map(c=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border2)">
+      <span style="font-size:13px;font-weight:600">${c.label}</span>
+      <input type="number" id="qty-${c.key}" min="0" max="99" value="${(day.quantities||{})[c.key]||''}"
+        style="width:60px;padding:6px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;text-align:center;font-family:Heebo,sans-serif;background:var(--bg);color:var(--text)">
+    </div>`).join('');
+
+  const stationsList=['מטיס 1','מטיס 2','מטיס 3','לוס','מטווח 3','מטווח 8','גבעת הלוס','לשביה'];
+  const selStations=day.stations||[];
+  let staBtns=stationsList.map(s=>`
+    <button class="person-btn${selStations.includes(s)?' on':''}" onclick="toggleStationSel('${s}',this)">${s}</button>
+  `).join('');
+
+  el.innerHTML=`
+    <div class="sheet-title">הגדרת יום</div>
+
+    <span class="slabel">תאריך ושם היום</span>
+    <input class="person-other" id="day-date" placeholder="למשל: יום חמישי 15.5.26" value="${day.date||''}">
+
+    <span class="slabel">שעת הגעה</span>
+    <input class="person-other" id="day-arrival" placeholder="למשל: 08:00" value="${day.arrivalTime||''}">
+
+    <span class="slabel">עמדות פעילות</span>
+    <div class="person-grid" id="sta-grid">${staBtns}</div>
+
+    <span class="slabel">כמויות מכולה אדומה</span>
+    <div style="margin-bottom:14px">${qtyFields}</div>
+
+    <span class="slabel">משימות בוקר (שורה אחת = משימה אחת)</span>
+    <textarea class="notes" id="day-tasks" style="height:120px" placeholder="זיכוי מגורים&#10;השלמת פערים בקפה&#10;פתיחת חד&quot;ן">${(day.tasks||[]).map(t=>t.text).join('\n')}</textarea>
+
+    <button class="next-btn" onclick="saveDayEdit()">שמור</button>
+    <button class="back-btn" onclick="closeSheet()">ביטול</button>
+  `;
+  document.getElementById('sheet-bg').classList.add('on');
+}
+
+function toggleStationSel(name, btn){
+  if(!db.day) db.day={};
+  if(!db.day.stations) db.day.stations=[];
+  const idx=db.day.stations.indexOf(name);
+  if(idx>=0){ db.day.stations.splice(idx,1); btn.classList.remove('on'); }
+  else { db.day.stations.push(name); btn.classList.add('on'); }
+}
+
+function saveDayEdit(){
+  if(!db.day) db.day={};
+  db.day.date=document.getElementById('day-date').value.trim();
+  db.day.arrivalTime=document.getElementById('day-arrival').value.trim();
+  const qty={};
+  DAY_CATS.forEach(function(c){
+    const v=parseInt(document.getElementById('qty-'+c.key).value)||0;
+    if(v) qty[c.key]=v;
+  });
+  db.day.quantities=qty;
+  const tasksRaw=document.getElementById('day-tasks').value;
+  const existing=db.day.tasks||[];
+  db.day.tasks=tasksRaw.split('\n').filter(t=>t.trim()).map(function(text){
+    const prev=existing.find(function(e){return e.text===text.trim();});
+    return {text:text.trim(), done:prev?prev.done:false};
+  });
+  save();renderDay();closeSheet();
 }
 
 load();
