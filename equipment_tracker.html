@@ -946,6 +946,13 @@ function renderDay(){
     ${day.arrivalTime?`<div style="font-size:13px;color:var(--text2)">הגעה: ${day.arrivalTime}</div>`:''}
   </div>`;
 
+  // הערות מיוחדות
+  if(day.notes){
+    html+=`<div class="day-section" style="border-right:3px solid var(--yellow);background:var(--yellow-dim)">
+      <div style="font-size:14px;font-weight:700">⚡ ${day.notes}</div>
+    </div>`;
+  }
+
   // עמדות
   if(day.stations&&day.stations.length){
     html+=`<div class="day-section"><div class="day-section-title">עמדות פעילות</div>`;
@@ -984,6 +991,20 @@ function renderDay(){
       </div>`;
     });
     html+='</div>';
+  }
+
+  // כיתות
+  if(day.classes){
+    html+=`<div class="day-section"><div class="day-section-title">כיתות</div>
+      <div style="font-size:13px;line-height:1.8;color:var(--text)">${day.classes.split('\n').filter(l=>l.trim()).map(l=>'• '+l).join('<br>')}</div>
+    </div>`;
+  }
+
+  // כוח אדם
+  if(day.staff){
+    html+=`<div class="day-section"><div class="day-section-title">כוח אדם</div>
+      <div style="font-size:13px;line-height:1.8;color:var(--text)">${day.staff.split('\n').filter(l=>l.trim()).map(l=>'• '+l).join('<br>')}</div>
+    </div>`;
   }
 
   html+='</div>';
@@ -1032,6 +1053,15 @@ function openDayEdit(){
     <span class="slabel">משימות בוקר (שורה אחת = משימה אחת)</span>
     <textarea class="notes" id="day-tasks" style="height:120px" placeholder="זיכוי מגורים&#10;השלמת פערים בקפה&#10;פתיחת חד&quot;ן">${(day.tasks||[]).map(t=>t.text).join('\n')}</textarea>
 
+    <span class="slabel">כוח אדם</span>
+    <textarea class="notes" id="day-staff" style="height:80px" placeholder="אליקים - מנשה + בר + שגיא&#10;לכיש - אוריאל + שרון">${day.staff||''}</textarea>
+
+    <span class="slabel">כיתות</span>
+    <textarea class="notes" id="day-classes" style="height:80px" placeholder="חד&quot;ן בל&quot;ר - עין הבשור&#10;אודיטוריום - מטיס מבצעי">${day.classes||''}</textarea>
+
+    <span class="slabel">הערות מיוחדות</span>
+    <input class="person-other" id="day-notes" placeholder='למשל: שקשוקה של דורית ב-12:00' value="${day.notes||''}">
+
     <button class="next-btn" onclick="saveDayEdit()">שמור</button>
     <button class="back-btn" onclick="closeSheet()">ביטול</button>
   `;
@@ -1055,7 +1085,9 @@ function saveDayEdit(){
     const v=parseInt(document.getElementById('qty-'+c.key).value)||0;
     if(v) qty[c.key]=v;
   });
-  db.day.quantities=qty;
+  db.day.staff=(document.getElementById('day-staff')||{}).value||'';
+  db.day.classes=(document.getElementById('day-classes')||{}).value||'';
+  db.day.notes=(document.getElementById('day-notes')||{}).value||'';
   const tasksRaw=document.getElementById('day-tasks').value;
   const existing=db.day.tasks||[];
   db.day.tasks=tasksRaw.split('\n').filter(t=>t.trim()).map(function(text){
