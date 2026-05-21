@@ -752,13 +752,15 @@ function doSubmit(btn){
   } else {
     F.items.forEach(id=>{
       const cond=F.itemCond&&F.itemCond[id]||F.cond||'ok';
+      const isFree=id.indexOf('חופשי:')===0;
+      const displayId=isFree?id.replace('חופשי:',''):id;
       const itemNotes=(id==='פקפק'&&F.itemQty&&F.itemQty['פקפק'])?`כמות: ${F.itemQty['פקפק']}${notes?' | '+notes:''}`:(notes||'');
       if(F.action==='dispatch'){
-        db.items[id]={status:cond==='fault'?'fault':'out',where:F.person,ts:t,notes:itemNotes,faultDesc:''};
-        db.log.unshift({id,action:'out',person:F.person,cond,notes:itemNotes,ts:t});
+        db.items[id]={status:cond==='fault'?'fault':'out',where:F.person,ts:t,notes:itemNotes,faultDesc:'',free:isFree,displayId};
+        db.log.unshift({id,action:'out',person:F.person,cond,notes:itemNotes,ts:t,displayId});
       } else {
-        db.items[id]={status:cond==='fault'?'fault':'base',where:'',ts:t,notes:itemNotes,faultDesc:''};
-        db.log.unshift({id,action:'in',person:'',cond,notes:itemNotes,ts:t});
+        db.items[id]={status:cond==='fault'?'fault':'base',where:'',ts:t,notes:itemNotes,faultDesc:'',free:isFree,displayId};
+        db.log.unshift({id,action:'in',person:'',cond,notes:itemNotes,ts:t,displayId});
       }
     });
   }
@@ -877,10 +879,21 @@ function renderOut(){
   const byP={};
   ITEMS.forEach(item=>{
     const s=db.items[item.id];
-    if(s.status==='out'||s.status==='fault'){
+    if(s&&(s.status==='out'||s.status==='fault')){
       const p=s.where||'לא ידוע';
       if(!byP[p])byP[p]=[];
-      byP[p].push({item,s});
+      byP[p].push({id:item.id,label:item.id,s});
+    }
+  });
+  // פריטים חופשיים
+  Object.keys(db.items||{}).forEach(id=>{
+    if(id.indexOf('חופשי:')===0){
+      const s=db.items[id];
+      if(s&&(s.status==='out'||s.status==='fault')){
+        const p=s.where||'לא ידוע';
+        if(!byP[p])byP[p]=[];
+        byP[p].push({id,label:s.displayId||id.replace('חופשי:',''),s});
+      }
     }
   });
   el.innerHTML='';
@@ -889,17 +902,76 @@ function renderOut(){
   people.forEach(p=>{
     const sec=document.createElement('div');
     sec.innerHTML=`<div class="cat-hdr"><span>📌 ${p}</span><span style="color:var(--yellow)">${byP[p].length} פריטים</span></div>`;
-    byP[p].forEach(({item,s})=>{
+    byP[p].forEach(({id,label,s})=>{
       const bc=s.status==='fault'?'b-fault':'b-out';
       const sl=s.status==='fault'?'תקלה':'בשטח';
       const row=document.createElement('div');
       row.className=`item-row ${s.status}`;
-      row.innerHTML=`<div class="item-id">${item.id}</div><div class="item-where" style="color:var(--text3)">${item.cat}</div><div class="item-badge ${bc}">${sl}</div>`;
+      row.style.flexWrap='wrap';
+      row.style.gap='6px';
+      row.innerHTML=`
+        <div class="item-id" style="flex:1">${label}</div>
+        <div class="item-badge ${bc}">${sl}</div>
+        <div style="width:100%;display:flex;gap:6px;margin-top:4px">
+          <button onclick="quickTransfer('${id}')" style="flex:1;padding:7px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent);border-radius:8px;font:600 12px/1 Heebo,sans-serif;cursor:pointer">↔ העבר</button>
+          <button onclick="quickReturn('${id}')" style="flex:1;padding:7px;background:var(--green-dim);color:var(--green);border:1px solid var(--green);border-radius:8px;font:600 12px/1 Heebo,sans-serif;cursor:pointer">✓ חזר למכולה</button>
+        </div>`;
       sec.appendChild(row);
     });
     el.appendChild(sec);
   });
 }
+function getSetIds(id){
+  // מחזיר את כל הפריטים בסט (רחפן + שלט)
+  const ids=[id];
+  const partner=getPartner(id);
+  if(partner&&db.items[partner]&&(db.items[partner].status==='out'||db.items[partner].status==='fault')){
+    ids.push(partner);
+  }
+  return ids;
+}
+
+function quickReturn(id){
+  const t=now();
+  const ids=getSetIds(id);
+  if(!db.log||!Array.isArray(db.log)) db.log=[];
+  ids.forEach(function(itemId){
+    db.items[itemId]={status:'base',where:'',ts:t,notes:'',faultDesc:''};
+    db.log.unshift({id:itemId,action:'in',person:'',cond:'ok',notes:'',ts:t});
+  });
+  db.log=db.log.slice(0,300);
+  save();renderAll();
+}
+
+function quickTransfer(id){
+  // פתח sheet מהיר לבחירת יעד בלבד
+  const el=document.getElementById('sheet-content');
+  const ids=getSetIds(id);
+  const btns=PEOPLE.map(p=>`<button class="person-btn" onclick="doQuickTransfer(${JSON.stringify(ids)},'${p}')">${p}</button>`).join('');
+  el.innerHTML=`
+    <div class="sheet-title">העבר ${id} לאן?</div>
+    ${ids.length>1?`<div style="font-size:12px;color:var(--accent);background:var(--accent-dim);padding:7px 10px;border-radius:8px;margin-bottom:12px">יועבר כסט עם ${ids[1]}</div>`:''}
+    <div class="person-grid">${btns}</div>
+    <input class="person-other" id="qt-other" placeholder="מיקום אחר..." oninput="document.getElementById('qt-confirm').disabled=!this.value.trim()">
+    <button class="next-btn" id="qt-confirm" disabled onclick="doQuickTransfer(${JSON.stringify(ids)},document.getElementById('qt-other').value.trim())" style="margin-top:8px">אשר</button>
+    <button class="back-btn" onclick="closeSheet()">ביטול</button>
+  `;
+  document.getElementById('sheet-bg').classList.add('on');
+}
+
+function doQuickTransfer(ids,dest){
+  if(!dest) return;
+  const t=now();
+  if(!db.log||!Array.isArray(db.log)) db.log=[];
+  ids.forEach(function(itemId){
+    const from=db.items[itemId]?db.items[itemId].where:'';
+    db.items[itemId]={status:'out',where:dest,ts:t,notes:'',faultDesc:''};
+    db.log.unshift({id:itemId,action:'transfer',person:dest,from:from,cond:'ok',notes:'',ts:t});
+  });
+  db.log=db.log.slice(0,300);
+  save();renderAll();closeSheet();
+}
+
 function renderLog(){
   const el=document.getElementById('log-list');
   const log=db.log&&Array.isArray(db.log)?db.log:[];
