@@ -166,6 +166,7 @@ textarea.notes:focus{border-color:var(--accent)}
   <button class="tab on" onclick="showPage('inventory',this)">מלאי</button>
   <button class="tab" onclick="showPage('day',this)">יום</button>
   <button class="tab" onclick="showPage('out',this)">בשטח</button>
+  <button class="tab" onclick="showPage('total',this)">כולל</button>
   <button class="tab" onclick="showPage('log',this)">יומן</button>
 </div>
 <div class="body">
@@ -179,6 +180,7 @@ textarea.notes:focus{border-color:var(--accent)}
     <div id="inventory-list"></div>
   </div>
   <div class="page" id="page-day"><div id="day-content"></div></div>
+  <div class="page" id="page-total"><div id="total-content" style="padding:12px"></div></div>
   <div class="page" id="page-out"><div id="out-list"></div></div>
   <div class="page" id="page-log"><div id="log-list"></div></div>
 </div>
@@ -279,6 +281,13 @@ const ITEMS=[
   {id:'א-187',cat:'רחפני אטטי'},{id:'א-1310',cat:'רחפני אטטי'},{id:'א-1396',cat:'רחפני אטטי'},{id:'א-1398',cat:'רחפני אטטי'},
   // כלי טיס זיק
   {id:'Z-145',cat:'כלי טיס זיק'},
+  // הגנמי
+  {id:'רינג-1',cat:'הגנמי'},{id:'רינג-2',cat:'הגנמי'},
+  {id:'חצובה-רינג-1',cat:'הגנמי'},{id:'חצובה-רינג-2',cat:'הגנמי'},
+  {id:'עין-הבשור',cat:'הגנמי'},{id:'חצובה-עין-הבשור',cat:'הגנמי'},
+  {id:'מחשב-עין-הבשור',cat:'הגנמי'},
+  {id:'פיש',cat:'הגנמי'},{id:'חצובה-פיש',cat:'הגנמי'},
+  {id:'ניסו-1',cat:'הגנמי'},{id:'ניסו-2',cat:'הגנמי'},
   // ציוד נוסף
   {id:'גנרטור-1',cat:'ציוד נוסף'},
   {id:'קשר-1',cat:'ציוד נוסף'},
@@ -524,15 +533,18 @@ function setItemCond(id,cond,btn){
 }
 
 function stepTransferFromItems(){
-  const outItems=ITEMS.filter(i=>(db.items[i.id].status==='out'||db.items[i.id].status==='fault')&&db.items[i.id].where===F.person);
-  if(!outItems.length) return`<div class="sheet-title">העברה</div><div class="empty">אין ציוד ב${F.person}</div><button class="back-btn" onclick="step=1;renderStep()">חזרה</button>`;
+  const outItems=ITEMS.filter(i=>db.items[i.id]&&(db.items[i.id].status==='out'||db.items[i.id].status==='fault')&&db.items[i.id].where===F.person).map(i=>({id:i.id,displayId:i.id}));
+  const freeItems=Object.keys(db.items||{}).filter(id=>id.indexOf('חופשי:')===0&&db.items[id].where===F.person&&(db.items[id].status==='out'||db.items[id].status==='fault')).map(id=>({id,displayId:db.items[id].displayId||id.replace('חופשי:','')}));
+  const allItems=[...outItems,...freeItems];
+  if(!allItems.length) return`<div class="sheet-title">העברה</div><div class="empty">אין ציוד ב${F.person}</div><button class="back-btn" onclick="step=1;renderStep()">חזרה</button>`;
   let html=`<div class="sheet-title">מה מועבר מ${F.person}?</div><div style="height:60px"></div>`;
   html+=`<div class="check-grid">`;
-  outItems.forEach(item=>{
+  allItems.forEach(item=>{
     const on=F.items.includes(item.id);
-    html+=`<div class="check-item${on?' on':''}" onclick="toggleItem('${item.id}')">
-      <div class="check-box${on?' on':''}" id="cb-${item.id}"></div>
-      <div style="flex:1"><div class="check-lbl">${item.id}</div></div>
+    const safeId=item.id.replace(/'/g,"\\'");
+    html+=`<div class="check-item${on?' on':''}" onclick="toggleItem('${safeId}')">
+      <div class="check-box${on?' on':''}" id="cb-${safeId}"></div>
+      <div style="flex:1"><div class="check-lbl">${item.displayId}</div></div>
     </div>`;
   });
   html+=`</div><div style="height:70px"></div>`;
@@ -598,19 +610,23 @@ function stepItems(){
 }
 
 function stepReturnItems(){
-  const outItems=ITEMS.filter(i=>db.items[i.id].status==='out'||db.items[i.id].status==='fault');
-  if(!outItems.length) return`<div class="sheet-title">החזרה</div><div class="empty">אין ציוד בשטח</div><button class="back-btn" onclick="step=0;renderStep()">חזרה</button>`;
+  const outItems=ITEMS.filter(i=>db.items[i.id]&&(db.items[i.id].status==='out'||db.items[i.id].status==='fault'));
+  // הוסף פריטים חופשיים
+  const freeItems=Object.keys(db.items||{}).filter(id=>id.indexOf('חופשי:')===0&&(db.items[id].status==='out'||db.items[id].status==='fault')).map(id=>({id,cat:'חופשי',displayId:db.items[id].displayId||id.replace('חופשי:','')}));
+  const allOut=[...outItems.map(i=>({id:i.id,cat:i.cat,displayId:i.id})),...freeItems];
+  if(!allOut.length) return`<div class="sheet-title">החזרה</div><div class="empty">אין ציוד בשטח</div><button class="back-btn" onclick="step=0;renderStep()">חזרה</button>`;
   const byP={};
-  outItems.forEach(item=>{const w=db.items[item.id].where||'לא ידוע';if(!byP[w])byP[w]=[];byP[w].push(item);});
+  allOut.forEach(item=>{const w=(db.items[item.id]||{}).where||'לא ידוע';if(!byP[w])byP[w]=[];byP[w].push(item);});
   let html=`<div class="sheet-title">מה חוזר?</div><div style="height:60px"></div>`;
   Object.keys(byP).forEach(p=>{
     html+=`<div class="cat-check-hdr"><span>📌 ${p}</span><button onclick="togglePersonReturn('${p}')">כולם</button></div>`;
     html+=`<div class="check-grid">`;
     byP[p].forEach(item=>{
       const on=F.items.includes(item.id);
-      html+=`<div class="check-item${on?' on':''}" onclick="toggleItem('${item.id}')">
-        <div class="check-box${on?' on':''}" id="cb-${item.id}"></div>
-        <div style="flex:1"><div class="check-lbl">${item.id}</div><div style="font-size:10px;color:var(--text3)">${item.cat}</div></div>
+      const safeId=item.id.replace(/'/g,"\\'");
+      html+=`<div class="check-item${on?' on':''}" onclick="toggleItem('${safeId}')">
+        <div class="check-box${on?' on':''}" id="cb-${safeId}"></div>
+        <div style="flex:1"><div class="check-lbl">${item.displayId}</div><div style="font-size:10px;color:var(--text3)">${item.cat}</div></div>
       </div>`;
     });
     html+=`</div>`;
@@ -750,7 +766,17 @@ function doSubmit(btn){
       db.log.unshift({id,action:'transfer',person:F.transferDest,from:F.person,cond,notes,ts:t});
     });
   } else {
-    F.items.forEach(id=>{
+    // אסוף את כל הפריטים כולל שותפי סט שלא סומנו
+    const allReturnIds=[...F.items];
+    if(F.action==='return'){
+      F.items.forEach(id=>{
+        const partner=getPartner(id);
+        if(partner&&db.items[partner]&&(db.items[partner].status==='out'||db.items[partner].status==='fault')&&!allReturnIds.includes(partner)){
+          allReturnIds.push(partner);
+        }
+      });
+    }
+    allReturnIds.forEach(id=>{
       const cond=F.itemCond&&F.itemCond[id]||F.cond||'ok';
       const isFree=id.indexOf('חופשי:')===0;
       const displayId=isFree?id.replace('חופשי:',''):id;
@@ -774,8 +800,10 @@ function buildWhatsappMsg(t, faultDesc, notes){
   var RLM = '\u200F';
   var action = F.action==='dispatch'
     ? RLM+'\u25B2 \u05D4\u05E2\u05DE\u05E1\u05D4 \u05DC\u05E9\u05D8\u05D7'
-    : RLM+'\u25BC \u05D4\u05D7\u05D6\u05E8\u05D4 \u05DC\u05D1\u05E1\u05D9\u05E1';
-  var loc = F.action==='dispatch' ? RLM+'\u25CF '+F.person : '';
+    : F.action==='transfer'
+    ? RLM+'\u21D4 \u05D4\u05E2\u05D1\u05E8\u05D4'
+    : RLM+'\u25BC \u05D4\u05D7\u05D6\u05E8\u05D4 \u05DC\u05DE\u05DB\u05D5\u05DC\u05D4';
+  var loc = F.action==='dispatch' ? RLM+'\u25CF '+F.person : F.action==='transfer' ? RLM+'\u25CF '+F.person+' \u2192 '+(F.transferDest||'') : '';
   var shownPartners = {};
   var byCat = {}, catOrder = [];
   F.items.forEach(function(id){
@@ -996,6 +1024,7 @@ function showPage(name,btn){
   const sb=document.getElementById('search-box');
   if(sb)sb.style.display=name==='inventory'?'':'none';
   if(name==='day') renderDay();
+  if(name==='total') renderTotal();
 }
 
 const APP_PASS = 'balar2026';
@@ -1034,7 +1063,48 @@ function doLogin(){
   }
 }
 
-// ── DAY TAB ──
+// ── מלאי כולל ──
+const TOTAL_INVENTORY = [
+  {cat:'רחפני משימה',         items:[{name:'כלי טיס בלתי מאויש; אברו מקס 4 תרמי',qty:18}]},
+  {cat:'שלטי משימה',          items:[{name:'שלט רחוק עם מסך; אברו מקס תרמי 4',qty:21}]},
+  {cat:'כלי טיס זיק',         items:[{name:'כלי טיס; זיקוקים N',qty:1},{name:'כלי טיס; זיקוקים איברו תרמי',qty:1}]},
+  {cat:'מתקני הטלה EVOMAX',   items:[{name:'מתקן הטלה, רימון רסס; EvoMax',qty:15},{name:'מארז שינוע; התקן כדור ברזל EvoMax',qty:14}]},
+  {cat:'שלט EVO MAX',         items:[{name:'שלט רחוק עם מסך; EvoMax 4N',qty:1},{name:'שלט חכם; EvoMax 4N',qty:1}]},
+  {cat:'רחפני אווטה',         items:[{name:'כלי טיס; רב ערוצי אורטה',qty:29}]},
+  {cat:'שלטי אווטה',          items:[{name:'שלט רחוק; ג\'ויסטיק; אורטה; מוסב',qty:15}]},
+  {cat:'משקפי אווטה',         items:[{name:'משקפי מציאות מדומה; אורטה אינטגרה',qty:15}]},
+  {cat:'צג בוסקילר',          items:[{name:'צג מפקד, אורטה; בוסקילר',qty:8}]},
+  {cat:'סוללות אווטה',        items:[{name:'סוללה נטענת; רחפן אורטה',qty:199},{name:'סוללה; רחפן רב ערוצי אורטה',qty:75}]},
+  {cat:'FLYCART3',            items:[{name:'כלי טיס; FLYCART30',qty:3},{name:'שלט רחוק; רחפן FLYCART',qty:3},{name:'סוללה נטענת; FLYCART',qty:24}]},
+  {cat:'רחפני אלפא',          items:[{name:'כלי טיס; אלפא',qty:4}]},
+  {cat:'שלטי אלפא',           items:[{name:'שלט רחוק עם מסך; רחפן אלפא',qty:4}]},
+  {cat:'מתקני הטלה בומרנג',   items:[{name:'מארז שינוע; התקן ברמרנג',qty:3},{name:'מתקן הטלה, 60 מ"מ; רחפן אלפא',qty:3}]},
+  {cat:'רחפן עטלף 5',         items:[{name:'רחפן, עטלף, 5 אינץ\', הכשרות',qty:20},{name:'סוללה, רחפן; עטלף 5\'',qty:30}]},
+  {cat:'הגנמי',               items:[{name:'ראש תצפית למערכת עין הבשור',qty:1},{name:'יחידת שליטה למערכת עין הבשור',qty:1},{name:'חצובה למערכת עין הבשור',qty:1},{name:'ספק כח',qty:1},{name:'ניסו 1 - ספק מתח',qty:1},{name:'ניסו 2 - חצובה תלת רגלית',qty:1}]},
+  {cat:'ציוד נוסף',           items:[{name:'כרטיס זיכרון; 64GB MICRO SD',qty:28},{name:'מטען רב ערוצי; רחפן מקס',qty:10},{name:'אנטנה מגדילת טורח deimox',qty:2},{name:'כבל 20מ\' לאנטנה deimox',qty:8}]},
+];
+
+function renderTotal(){
+  const el=document.getElementById('total-content');
+  if(!el) return;
+  let html='';
+  TOTAL_INVENTORY.forEach(function(section){
+    const total=section.items.reduce(function(s,i){return s+i.qty;},0);
+    html+=`<div class="day-section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="day-section-title" style="margin-bottom:0">${section.cat}</div>
+        <div style="font-size:13px;font-weight:800;color:var(--accent)">${total} סה"כ</div>
+      </div>`;
+    section.items.forEach(function(item){
+      html+=`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border2);font-size:13px">
+        <span style="color:var(--text2);flex:1;padding-left:8px">${item.name}</span>
+        <span style="font-weight:700;color:var(--text)">${item.qty}</span>
+      </div>`;
+    });
+    html+='</div>';
+  });
+  el.innerHTML=html;
+}
 // מבנה db.day = { date, stations[], quantities:{cat:n}, tasks:[{text,done}], arrivalTime }
 
 const DAY_CATS = [
