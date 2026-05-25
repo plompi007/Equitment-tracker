@@ -574,15 +574,21 @@ function stepPerson(){
 }
 
 // קטגוריות שלטים — לא מוצגות בנפרד בהעמסה (יוצאות כסט)
-const PARTNER_CATS=new Set(['שלטי משימה','שלטי אווטה','שלטי אלפא','שלטי FLYCART']);
+const PARTNER_CATS=new Set(['שלטי משימה','שלטי אווטה','שלטי אלפא','שלטי FLYCART','שלטי אטטי','שלט EVO MAX']);
 
 function stepItems(){
-  const cats=[...new Set(ITEMS.map(i=>i.cat))].filter(c=>!PARTNER_CATS.has(c));
+  const CAT_ORDER = [
+    'רחפני משימה','רחפני אטטי','מתקני הטלה EVOMAX','מתקני הטלה בומרנג',
+    'רחפני אלפא','רחפני אווטה','כלי טיס זיק','FLYCART3','רחפן עטלף 5',
+    'הגנמי','צג בוסקילר','משקפי אווטה','ציוד נוסף'
+  ];
+  const allCats=[...new Set(ITEMS.map(i=>i.cat))].filter(c=>!PARTNER_CATS.has(c));
+  const cats=[...CAT_ORDER.filter(c=>allCats.includes(c)), ...allCats.filter(c=>!CAT_ORDER.includes(c))];
   let html=`<div class="sheet-title">פריטים → ${F.person}</div>
   <div style="font-size:11px;color:var(--accent);margin-bottom:12px;background:var(--accent-dim);padding:7px 10px;border-radius:8px;font-weight:600">סימון רחפן = שלט יוצא אוטומטית כסט</div>
   <div style="height:60px"></div>`;
   cats.forEach(cat=>{
-    const inCat=ITEMS.filter(i=>i.cat===cat&&db.items[i.id].status==='base'&&!db.items[i.id].worn);
+    const inCat=ITEMS.filter(i=>i.cat===cat&&db.items[i.id]&&db.items[i.id].status==='base'&&!db.items[i.id].worn);
     if(!inCat.length) return;
     html+=`<div class="cat-check-hdr"><span>${cat}</span><button onclick="toggleCat('${cat}')">כולם</button></div>`;
     html+=`<div class="check-grid">`;
