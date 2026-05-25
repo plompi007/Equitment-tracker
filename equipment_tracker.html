@@ -870,7 +870,12 @@ function showShareSheet(t, faultDesc, notes){
 function renderAll(){renderInventory();renderOut();renderLog();renderHeader();renderDay();}
 function renderHeader(){
   let o=0,f=0;
-  ITEMS.forEach(i=>{const s=db.items[i.id].status;if(s==='out')o++;if(s==='fault')f++;});
+  ITEMS.forEach(i=>{
+    const s=db.items[i.id];
+    if(!s) return;
+    if(s.status==='out') o++;
+    if(s.status==='fault'||s.worn===true) f++;
+  });
   document.getElementById('hdr-out').textContent='בשטח: '+o;
   document.getElementById('hdr-fault').textContent='תקלות: '+f;
   document.getElementById('sn-base').textContent=ITEMS.length-o-f;
