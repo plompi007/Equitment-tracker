@@ -616,9 +616,20 @@ const KIT_GROUPS = {
 };
 let expandedKits = {};
 
-function toggleKitExpand(cat){
+// מפה מ-kitId לשם קטגוריה
+let kitIdMap = {};
+
+function toggleKitExpand(kitId){
+  const cat=kitIdMap[kitId];
+  if(!cat) return;
   expandedKits[cat]=!expandedKits[cat];
   renderStep();
+}
+
+function toggleCatById(kitId){
+  const cat=kitIdMap[kitId];
+  if(!cat) return;
+  toggleCat(cat);
 }
 
 function stepItems(){
@@ -643,10 +654,11 @@ function stepItems(){
       const allSelected=inCat.every(i=>F.items.includes(i.id));
       const someSelected=inCat.some(i=>F.items.includes(i.id));
       const isExpanded=expandedKits[cat];
-      const safecat=cat.replace(/'/g,"\\'").replace(/"/g,'&quot;');
-      html+=`<div class="cat-check-hdr" style="cursor:pointer" onclick="toggleKitExpand('${safecat}')">
+      const kitId='kit-'+cat.replace(/[^a-zA-Z0-9]/g,'-');
+      kitIdMap[kitId]=cat;
+      html+=`<div class="cat-check-hdr" id="${kitId}" style="cursor:pointer" onclick="toggleKitExpand('${kitId}')">
         <span>${kitLabel} ${isExpanded?'▲':'▼'}</span>
-        <button onclick="event.stopPropagation();toggleCat('${safecat}')" style="margin-right:8px">${allSelected?'בטל הכל':'כולם'}</button>
+        <button onclick="event.stopPropagation();toggleCatById('${kitId}')" style="margin-right:8px">${allSelected?'בטל הכל':'כולם'}</button>
       </div>`;
       if(someSelected&&!isExpanded){
         html+=`<div style="font-size:12px;color:var(--accent);padding:4px 4px 8px;font-weight:600">${inCat.filter(i=>F.items.includes(i.id)).length}/${inCat.length} פריטים סומנו</div>`;
