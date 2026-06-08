@@ -663,15 +663,16 @@ function stepItems(){
       return;
     }
 
-    html+=`<div class="cat-check-hdr"><span>${cat}</span><button onclick="toggleCat('${cat}')">כולם</button></div>`;
+    html+=`<div class="cat-check-hdr"><span>${cat}</span><button onclick="toggleCat(this.closest('.cat-check-hdr').dataset.cat)">כולם</button></div>`.replace('<div class="cat-check-hdr">', `<div class="cat-check-hdr" data-cat="${cat.replace(/"/g,'&quot;')}">`);
     html+=`<div class="check-grid">`;
     inCat.forEach(item=>{
       const on=F.items.includes(item.id);
       const partner=getPartner(item.id);
       const partnerAvail=partner&&db.items[partner]&&db.items[partner].status==='base';
       const partnerLabel=partner&&partnerAvail?`<div class="check-sub">+שלט</div>`:'';
-      html+=`<div class="check-item${on?' on':''}" onclick="toggleItem('${item.id}')">
-        <div class="check-box${on?' on':''}" id="cb-${item.id}"></div>
+      const safeId=item.id.replace(/'/g,"\\'");
+      html+=`<div class="check-item${on?' on':''}" onclick="toggleItem('${safeId}')">
+        <div class="check-box${on?' on':''}" id="cb-${safeId}"></div>
         <div style="flex:1"><div class="check-lbl">${item.id}</div>${partnerLabel}</div>
       </div>`;
     });
@@ -775,7 +776,7 @@ function toggleItem(id){
   }
 }
 function toggleCat(cat){
-  const inCat=ITEMS.filter(i=>i.cat===cat&&db.items[i.id].status==='base').map(i=>i.id);
+  const inCat=ITEMS.filter(i=>i.cat===cat&&db.items[i.id]&&db.items[i.id].status==='base'&&!db.items[i.id].worn).map(i=>i.id);
   const allOn=inCat.every(id=>F.items.includes(id));
   if(allOn) inCat.forEach(id=>removeFromSelection(id));
   else inCat.forEach(id=>addToSelection(id));
