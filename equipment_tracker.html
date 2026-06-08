@@ -633,6 +633,7 @@ function toggleCatById(kitId){
 }
 
 function stepItems(){
+  try {
   const CAT_ORDER = [
     'רחפני משימה','רחפני אטטי','מתקני הטלה EVOMAX','מתקני הטלה בומרנג',
     'רחפני אלפא','רחפני אווטה','כלי טיס זיק','FLYCART3','רחפן עטלף 5',
@@ -702,6 +703,9 @@ function stepItems(){
   <div id="free-entries-list"></div>
   <div style="height:70px"></div>`;
   return html;
+  } catch(e) {
+    return `<div style="padding:20px;color:red;font-size:13px">שגיאה: ${e.message}</div>`;
+  }
 }
 
 function stepReturnItems(){
