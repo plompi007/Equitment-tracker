@@ -305,6 +305,15 @@ const ITEMS=[
   {id:'מחשב-עין-הבשור',cat:'הגנמי'},
   {id:'פיש',cat:'הגנמי'},{id:'חצובה-פיש',cat:'הגנמי'},
   {id:'ניסו-1',cat:'הגנמי'},{id:'ניסו-2',cat:'הגנמי'},
+  // מיגון
+  {id:'שכפ"ץ-1',cat:'מיגון'},{id:'שכפ"ץ-2',cat:'מיגון'},{id:'שכפ"ץ-3',cat:'מיגון'},
+  {id:'שכפ"ץ-4',cat:'מיגון'},{id:'שכפ"ץ-5',cat:'מיגון'},{id:'שכפ"ץ-6',cat:'מיגון'},
+  {id:'שכפ"ץ-7',cat:'מיגון'},{id:'שכפ"ץ-8',cat:'מיגון'},{id:'שכפ"ץ-9',cat:'מיגון'},
+  {id:'שכפ"ץ-10',cat:'מיגון'},
+  {id:'קסדה-1',cat:'מיגון'},{id:'קסדה-2',cat:'מיגון'},{id:'קסדה-3',cat:'מיגון'},
+  {id:'קסדה-4',cat:'מיגון'},{id:'קסדה-5',cat:'מיגון'},{id:'קסדה-6',cat:'מיגון'},
+  {id:'קסדה-7',cat:'מיגון'},{id:'קסדה-8',cat:'מיגון'},{id:'קסדה-9',cat:'מיגון'},
+  {id:'קסדה-10',cat:'מיגון'},
   // ציוד נוסף
   {id:'גנרטור-1',cat:'ציוד נוסף'},
   {id:'קשר-1',cat:'ציוד נוסף'},
@@ -328,7 +337,13 @@ const ITEMS=[
 })();
 const PEOPLE=['מטיס 1','מטיס 2','מטיס 3','לוס','מטווח 8'];
 const KEY='uav3_v1';
-let db={items:{},log:[]};
+let db={items:{},log:[],customLocations:[]};
+
+function getLocations(){
+  const custom=db.customLocations||[];
+  // מיזוג ללא כפילויות
+  return [...PEOPLE,...custom.filter(c=>!PEOPLE.includes(c))];
+}
 let firebaseReady=false;
 let fbDatabase=null, fbRef=null, fbSet=null, fbOnValue=null;
 
@@ -582,21 +597,32 @@ function stepAction(){
 
 function stepPerson(){
   const title = F.action==='transfer' ? 'מאיפה?' : 'לאן יורד הציוד?';
-  const btns=PEOPLE.map(p=>`<button class="person-btn${F.person===p?' on':''}" onclick="selPerson('${p}')">${p}</button>`).join('');
+  const locs=getLocations();
+  const btns=locs.map(p=>`<button class="person-btn${F.person===p?' on':''}" onclick="selPerson('${p.replace(/'/g,"\\'")}')">${p}</button>`).join('');
   return`<div class="sheet-title">${title}</div>
   <div class="person-grid">${btns}</div>
-  <input class="person-other" id="other-inp" placeholder="מיקום אחר / שם..." value="${PEOPLE.includes(F.person)?'':F.person}" oninput="F.person=this.value.trim();updateNext1()">
+  <input class="person-other" id="other-inp" placeholder="מיקום חדש..." value="${locs.includes(F.person)?'':F.person}" oninput="F.person=this.value.trim();updateNext1()">
   <button class="next-btn" id="next1" onclick="step=2;renderStep()" ${F.person?'':'disabled'}>המשך</button>
   <button class="back-btn" onclick="step=0;renderStep()">חזרה</button>`;
 }
 
-// קטגוריות שלטים — לא מוצגות בנפרד בהעמסה (יוצאות כסט)
-const PARTNER_CATS=new Set(['שלטי משימה','שלטי אווטה','שלטי אלפא','שלטי FLYCART','שלטי אטטי','שלט EVO MAX']);
+// קטגוריות שהן "ערכות" — מוצגות כפריט אחד שניתן לפתוח
+const KIT_GROUPS = {
+  'ערכת עטלף 7': 'ערכה 7',
+  'ערכת עטלף 8': 'ערכה 8',
+};
+let expandedKits = {};
+
+function toggleKitExpand(cat){
+  expandedKits[cat]=!expandedKits[cat];
+  renderStep();
+}
 
 function stepItems(){
   const CAT_ORDER = [
     'רחפני משימה','רחפני אטטי','מתקני הטלה EVOMAX','מתקני הטלה בומרנג',
     'רחפני אלפא','רחפני אווטה','כלי טיס זיק','FLYCART3','רחפן עטלף 5',
+    'עטלף XTEND 10"','ערכת עטלף 7','ערכת עטלף 8',
     'הגנמי','צג בוסקילר','משקפי אווטה','ציוד נוסף'
   ];
   const allCats=[...new Set(ITEMS.map(i=>i.cat))].filter(c=>!PARTNER_CATS.has(c));
@@ -607,6 +633,36 @@ function stepItems(){
   cats.forEach(cat=>{
     const inCat=ITEMS.filter(i=>i.cat===cat&&db.items[i.id]&&db.items[i.id].status==='base'&&!db.items[i.id].worn);
     if(!inCat.length) return;
+
+    // ערכה — הצג כפריט אחד עם אפשרות פתיחה
+    if(KIT_GROUPS[cat]){
+      const kitLabel=KIT_GROUPS[cat];
+      const allSelected=inCat.every(i=>F.items.includes(i.id));
+      const someSelected=inCat.some(i=>F.items.includes(i.id));
+      const isExpanded=expandedKits[cat];
+      const safecat=cat.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+      html+=`<div class="cat-check-hdr" style="cursor:pointer" onclick="toggleKitExpand('${safecat}')">
+        <span>${kitLabel} ${isExpanded?'▲':'▼'}</span>
+        <button onclick="event.stopPropagation();toggleCat('${safecat}')" style="margin-right:8px">${allSelected?'בטל הכל':'כולם'}</button>
+      </div>`;
+      if(someSelected&&!isExpanded){
+        html+=`<div style="font-size:12px;color:var(--accent);padding:4px 4px 8px;font-weight:600">${inCat.filter(i=>F.items.includes(i.id)).length}/${inCat.length} פריטים סומנו</div>`;
+      }
+      if(isExpanded){
+        html+=`<div class="check-grid">`;
+        inCat.forEach(item=>{
+          const on=F.items.includes(item.id);
+          const label=item.id.replace(cat.includes('7')?'ערכה-7-':'ערכה-8-','').replace(/-/g,' ');
+          html+=`<div class="check-item${on?' on':''}" onclick="toggleItem('${item.id}')">
+            <div class="check-box${on?' on':''}" id="cb-${item.id}"></div>
+            <div style="flex:1"><div class="check-lbl" style="font-size:12px">${label}</div></div>
+          </div>`;
+        });
+        html+=`</div>`;
+      }
+      return;
+    }
+
     html+=`<div class="cat-check-hdr"><span>${cat}</span><button onclick="toggleCat('${cat}')">כולם</button></div>`;
     html+=`<div class="check-grid">`;
     inCat.forEach(item=>{
@@ -780,6 +836,14 @@ function doSubmit(btn){
   const notes=(document.getElementById('notes-txt')||{}).value||'';
   if(!db.log||!Array.isArray(db.log)) db.log=[];
   if(!db.items) db.items={};
+  // שמור מיקום חדש בהיסטוריה
+  if(F.person && !PEOPLE.includes(F.person)){
+    if(!db.customLocations) db.customLocations=[];
+    if(!db.customLocations.includes(F.person)){
+      db.customLocations.push(F.person);
+      if(db.customLocations.length>20) db.customLocations.shift();
+    }
+  }
 
   if(F.action==='transfer'){
     // העברה — שנה מיקום בלי לסמן חזרה
