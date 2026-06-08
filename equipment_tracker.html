@@ -207,15 +207,17 @@ const ITEMS=[
   {id:'M-31',cat:'רחפני משימה'},
   {id:'M-3614',cat:'רחפני משימה'},{id:'M-4160',cat:'רחפני משימה'},
   {id:'M-4498',cat:'רחפני משימה'},{id:'M-4700',cat:'רחפני משימה'},
-  {id:'M-5212',cat:'רחפני משימה'},{id:'M-5630',cat:'רחפני משימה'},
-  {id:'M-5726',cat:'רחפני משימה'},{id:'M-5732',cat:'רחפני משימה'},{id:'M-5733',cat:'רחפני משימה'},
+  {id:'M-1845',cat:'רחפני משימה'},{id:'M-2602',cat:'רחפני משימה'},{id:'M-187s',cat:'רחפני משימה'},
+  {id:'M-5212',cat:'רחפני משימה'},{id:'M-5714',cat:'רחפני משימה'},
+  {id:'M-5732',cat:'רחפני משימה'},{id:'M-5733',cat:'רחפני משימה'},
   {id:'M-5736',cat:'רחפני משימה'},{id:'M-5924',cat:'רחפני משימה'},{id:'M-6799',cat:'רחפני משימה'},
   {id:'M-20527',cat:'רחפני משימה'},{id:'M-20624',cat:'רחפני משימה'},
   // שלטי משימה — ממויין בסדר עולה
   {id:'שלט-M-31',cat:'שלטי משימה'},
   {id:'שלט-M-3614',cat:'שלטי משימה'},{id:'שלט-M-4160',cat:'שלטי משימה'},{id:'שלט-M-4167',cat:'שלטי משימה'},{id:'שלט-M-4498',cat:'שלטי משימה'},
-  {id:'שלט-M-4700',cat:'שלטי משימה'},{id:'שלט-M-5212',cat:'שלטי משימה'},
-  {id:'שלט-M-5630',cat:'שלטי משימה'},{id:'שלט-M-5726',cat:'שלטי משימה'},
+  {id:'שלט-M-1845',cat:'שלטי משימה'},{id:'שלט-M-2602',cat:'שלטי משימה'},{id:'שלט-M-187s',cat:'שלטי משימה'},
+  {id:'שלט-M-4700',cat:'שלטי משימה'},{id:'שלט-M-5212',cat:'שלטי משימה'},{id:'שלט-M-5714',cat:'שלטי משימה'},
+  
   {id:'שלט-M-5732',cat:'שלטי משימה'},{id:'שלט-M-5733',cat:'שלטי משימה'},{id:'שלט-M-5736',cat:'שלטי משימה'},
   {id:'שלט-M-5924',cat:'שלטי משימה'},{id:'שלט-M-6799',cat:'שלטי משימה'},
   {id:'שלט-M-20527',cat:'שלטי משימה'},{id:'שלט-M-20624',cat:'שלטי משימה'},
@@ -410,9 +412,10 @@ function now(){const n=new Date();return`${n.getDate()}/${n.getMonth()+1} ${Stri
 const SET_PAIRS = {
   // משימה
   'M-31':'שלט-M-31',
-  'M-4160':'שלט-M-4160','M-4498':'שלט-M-4498','M-5212':'שלט-M-5212',
+  'M-1845':'שלט-M-1845','M-2602':'שלט-M-2602','M-187s':'שלט-M-187s',
+  'M-4160':'שלט-M-4160','M-4498':'שלט-M-4498','M-5212':'שלט-M-5212','M-5714':'שלט-M-5714',
   'M-20624':'שלט-M-20624','M-4700':'שלט-M-4700',
-  'M-3614':'שלט-M-3614','M-5630':'שלט-M-5630','M-5726':'שלט-M-5726','M-5732':'שלט-M-5732',
+  'M-3614':'שלט-M-3614','M-5732':'שלט-M-5732',
   'M-5733':'שלט-M-5733','M-6799':'שלט-M-6799','M-20527':'שלט-M-20527','M-5736':'שלט-M-5736',
   'M-5924':'שלט-M-5924',
   // בומרנג
@@ -691,9 +694,18 @@ function stepItems(){
 
 function stepReturnItems(){
   const outItems=ITEMS.filter(i=>db.items[i.id]&&(db.items[i.id].status==='out'||db.items[i.id].status==='fault'));
+  // הסתר שלטים שהם שותפי סט — יחזרו אוטומטית
+  const mainItems=outItems.filter(i=>{
+    const partner=getPartner(i.id);
+    // אם זה שלט שיש לו רחפן בשטח — הסתר אותו
+    if(partner&&db.items[partner]&&(db.items[partner].status==='out'||db.items[partner].status==='fault')){
+      return !PARTNER_CATS.has(i.cat);
+    }
+    return true;
+  });
   // הוסף פריטים חופשיים
   const freeItems=Object.keys(db.items||{}).filter(id=>id.indexOf('חופשי:')===0&&(db.items[id].status==='out'||db.items[id].status==='fault')).map(id=>({id,cat:'חופשי',displayId:db.items[id].displayId||id.replace('חופשי:','')}));
-  const allOut=[...outItems.map(i=>({id:i.id,cat:i.cat,displayId:i.id})),...freeItems];
+  const allOut=[...mainItems.map(i=>({id:i.id,cat:i.cat,displayId:i.id})),...freeItems];
   if(!allOut.length) return`<div class="sheet-title">החזרה</div><div class="empty">אין ציוד בשטח</div><button class="back-btn" onclick="step=0;renderStep()">חזרה</button>`;
   const byP={};
   allOut.forEach(item=>{const w=(db.items[item.id]||{}).where||'לא ידוע';if(!byP[w])byP[w]=[];byP[w].push(item);});
