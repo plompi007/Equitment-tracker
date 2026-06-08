@@ -491,6 +491,7 @@ function updateDots(){
 function renderStep(){
   updateDots();
   const el=document.getElementById('sheet-content');
+  try {
   if(F.action==='transfer'){
     if(step===0) el.innerHTML=stepAction();
     else if(step===1) el.innerHTML=stepPerson();
@@ -519,6 +520,9 @@ function renderStep(){
     }
   }
   attachListeners();
+  } catch(e) {
+    el.innerHTML=`<div style="padding:20px;color:red;font-size:13px">שגיאה בשלב ${step}: ${e.message}</div><button class="back-btn" onclick="step=0;renderStep()">חזרה לתחילה</button>`;
+  }
 }
 
 function addFreeEntry(){
