@@ -1019,6 +1019,7 @@ function renderInventory(){
     sec.innerHTML=`<div class="cat-hdr"><span>${cat}</span><span style="color:var(--text3)">${items.length}</span></div>`;
     items.forEach(item=>{
       const s=db.items[item.id];
+      if(!s) return;
       const isWorn = s.worn===true;
       const sl=isWorn?'בלאי':s.status==='base'?'בבסיס':s.status==='out'?'בשטח':'תקלה';
       const bc=isWorn?'b-fault':s.status==='base'?'b-base':s.status==='out'?'b-out':'b-fault';
