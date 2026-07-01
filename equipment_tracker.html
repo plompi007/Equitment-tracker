@@ -1162,6 +1162,7 @@ function showPage(name,btn){
   btn.classList.add('on');
   const sb=document.getElementById('search-box');
   if(sb)sb.style.display=name==='inventory'?'':'none';
+  if(name==='inventory') renderInventory();
   if(name==='day') renderDay();
   if(name==='total') renderTotal();
   if(name==='manage') renderManage();
