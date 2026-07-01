@@ -329,20 +329,57 @@ const ITEMS=[
   {id:'פקפק',cat:'ציוד נוסף'},
 ];
 
+// מיון קטגוריה בודדת לפי מספר עולה (ניתן לשימוש חוזר)
+function sortCategoryItems(cat){
+  const idx=[], items=[];
+  ITEMS.forEach((item,i)=>{ if(item.cat===cat){idx.push(i);items.push(item);} });
+  items.sort((a,b)=>{
+    const na=parseFloat(a.id.replace(/[^\d.]/g,''))||0;
+    const nb=parseFloat(b.id.replace(/[^\d.]/g,''))||0;
+    return na-nb;
+  });
+  idx.forEach((pos,i)=>ITEMS[pos]=items[i]);
+}
+
 // מיון כל קטגוריה לפי מספר
 (function sortItems(){
   const cats=[...new Set(ITEMS.map(i=>i.cat))];
-  cats.forEach(cat=>{
-    const idx=[], items=[];
-    ITEMS.forEach((item,i)=>{ if(item.cat===cat){idx.push(i);items.push(item);} });
-    items.sort((a,b)=>{
-      const na=parseFloat(a.id.replace(/[^\d.]/g,''))||0;
-      const nb=parseFloat(b.id.replace(/[^\d.]/g,''))||0;
-      return na-nb;
-    });
-    idx.forEach((pos,i)=>ITEMS[pos]=items[i]);
-  });
+  cats.forEach(cat=>sortCategoryItems(cat));
 })();
+
+// הוספת פריט מותאם אישית למערכת המלאי בפועל (כדי שיופיע ברשימה ויהיה ניתן להעמסה)
+function addCustomItemToInventory(name,qty,cat){
+  const ids=[];
+  if(qty<=1){
+    ids.push(name);
+  } else {
+    for(let i=1;i<=qty;i++) ids.push(name+' '+i);
+  }
+  ids.forEach(id=>{
+    if(!ITEMS.some(it=>it.id===id)) ITEMS.push({id,cat,custom:true});
+    if(!db.items) db.items={};
+    if(!db.items[id]) db.items[id]={status:'base',where:'',ts:'',notes:'',faultDesc:''};
+  });
+  sortCategoryItems(cat);
+  return ids;
+}
+
+// סנכרון פריטים מותאמים אישית שנטענו מה-DB (Firebase/localStorage) לתוך מערך ה-ITEMS בפועל
+function syncCustomItemsIntoItems(){
+  (db.customItems||[]).forEach(ci=>{
+    let ids=ci.ids;
+    if(!ids||!ids.length){
+      ids = ci.qty>1 ? Array.from({length:ci.qty},(_,i)=>ci.name+' '+(i+1)) : [ci.name];
+      ci.ids=ids;
+    }
+    ids.forEach(id=>{
+      if(!ITEMS.some(it=>it.id===id)) ITEMS.push({id,cat:ci.cat,custom:true});
+      if(!db.items) db.items={};
+      if(!db.items[id]) db.items[id]={status:'base',where:'',ts:'',notes:'',faultDesc:''};
+    });
+    sortCategoryItems(ci.cat);
+  });
+}
 const PEOPLE=['מטיס 1','מטיס 2','מטיס 3','לוס','מטווח 8'];
 const PARTNER_CATS=new Set(['שלטי משימה','שלטי אווטה','שלטי אלפא','שלטי FLYCART','שלטי אטטי','שלט EVO MAX']);
 const KEY='uav3_v1';
@@ -377,6 +414,7 @@ function initFirebase(){
         if(!db.day && prevDay) db.day=prevDay;
         if(!db.log) db.log=[];
         if(!db.items) db.items={};
+        syncCustomItemsIntoItems();
         ITEMS.forEach(i=>{if(!db.items[i.id])db.items[i.id]={status:'base',where:'',ts:'',notes:'',faultDesc:''};});
         try{localStorage.setItem(KEY,JSON.stringify(db));}catch(e){}
         renderAll();
@@ -408,6 +446,7 @@ function load(){
   if(!db.log) db.log=[];
   if(!db.items) db.items={};
   if(!db.day) db.day={};
+  syncCustomItemsIntoItems();
   ITEMS.forEach(i=>{if(!db.items[i.id])db.items[i.id]={status:'base',where:'',ts:'',notes:'',faultDesc:''};});
   renderAll();
 }
@@ -1432,7 +1471,8 @@ function addNewItem(){
   }
   
   if(!db.customItems) db.customItems=[];
-  db.customItems.push({name,qty,cat});
+  const ids=addCustomItemToInventory(name,qty,cat);
+  db.customItems.push({name,qty,cat,ids});
   
   document.getElementById('item-name').value='';
   document.getElementById('item-qty').value='';
@@ -1441,13 +1481,23 @@ function addNewItem(){
   document.getElementById('item-new-cat').style.display='none';
   
   renderManage();
+  renderAll();
   save();
 }
 
 function removeCustomItem(idx){
-  if(!confirm('בטוח?')) return;
+  if(!confirm('בטוח? הפריט יוסר גם ממערכת המעקב')) return;
+  const item=db.customItems[idx];
+  if(item&&item.ids){
+    item.ids.forEach(id=>{
+      const pos=ITEMS.findIndex(it=>it.id===id);
+      if(pos>=0) ITEMS.splice(pos,1);
+      if(db.items&&db.items[id]) delete db.items[id];
+    });
+  }
   db.customItems.splice(idx,1);
   renderManage();
+  renderAll();
   save();
 }
 
