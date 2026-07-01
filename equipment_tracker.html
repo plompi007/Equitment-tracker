@@ -167,6 +167,7 @@ textarea.notes:focus{border-color:var(--accent)}
   <button class="tab" onclick="showPage('day',this)">יום</button>
   <button class="tab" onclick="showPage('out',this)">בשטח</button>
   <button class="tab" onclick="showPage('total',this)">כולל</button>
+  <button class="tab" onclick="showPage('manage',this)">ניהול</button>
   <button class="tab" onclick="showPage('log',this)">יומן</button>
 </div>
 <div class="body">
@@ -181,6 +182,7 @@ textarea.notes:focus{border-color:var(--accent)}
   </div>
   <div class="page" id="page-day"><div id="day-content"></div></div>
   <div class="page" id="page-total"><div id="total-content" style="padding:12px"></div></div>
+  <div class="page" id="page-manage"><div id="manage-content" style="padding:12px"></div></div>
   <div class="page" id="page-out"><div id="out-list"></div></div>
   <div class="page" id="page-log"><div id="log-list"></div></div>
 </div>
@@ -1019,7 +1021,6 @@ function renderInventory(){
     sec.innerHTML=`<div class="cat-hdr"><span>${cat}</span><span style="color:var(--text3)">${items.length}</span></div>`;
     items.forEach(item=>{
       const s=db.items[item.id];
-      if(!s) return;
       const isWorn = s.worn===true;
       const sl=isWorn?'בלאי':s.status==='base'?'בבסיס':s.status==='out'?'בשטח':'תקלה';
       const bc=isWorn?'b-fault':s.status==='base'?'b-base':s.status==='out'?'b-out':'b-fault';
@@ -1163,6 +1164,7 @@ function showPage(name,btn){
   if(sb)sb.style.display=name==='inventory'?'':'none';
   if(name==='day') renderDay();
   if(name==='total') renderTotal();
+  if(name==='manage') renderManage();
 }
 
 const APP_PASS = 'balar2026';
@@ -1346,6 +1348,107 @@ const TOTAL_INVENTORY = [
 ];
 
 function renderTotal(){
+  const el=document.getElementById('total-content');
+  if(!el) return;
+  let html='';
+  TOTAL_INVENTORY.forEach(function(section){
+    const total=section.items.reduce(function(s,i){return s+i.qty;},0);
+    html+=`<div class="day-section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="day-section-title" style="margin-bottom:0">${section.cat}</div>
+        <div style="font-size:13px;font-weight:800;color:var(--accent)">${total} סה"כ</div>
+      </div>`;
+    section.items.forEach(function(item){
+      html+=`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border2);font-size:13px">
+        <span style="color:var(--text2);flex:1;padding-left:8px">${item.name}</span>
+        <span style="font-weight:700;color:var(--text)">${item.qty}</span>
+      </div>`;
+    });
+    html+='</div>';
+  });
+  el.innerHTML=html;
+}
+
+function renderManage(){
+  const el=document.getElementById('manage-content');
+  let html=`<div style="padding:12px">
+    <h3 style="margin-bottom:16px">הוספת פריט חדש</h3>
+    <input id="item-name" placeholder="שם הפריט" style="width:100%;padding:8px;margin-bottom:10px;border:1px solid var(--border2);border-radius:6px">
+    <input id="item-qty" type="number" placeholder="כמות" style="width:100%;padding:8px;margin-bottom:10px;border:1px solid var(--border2);border-radius:6px">
+    <select id="item-cat" style="width:100%;padding:8px;margin-bottom:10px;border:1px solid var(--border2);border-radius:6px">
+      <option value="">-- בחר קטגוריה --</option>`;
+  
+  const cats=[...new Set(ITEMS.map(i=>i.cat))].sort();
+  cats.forEach(c=>html+=`<option value="${c}">${c}</option>`);
+  html+=`<option value="__new__">+ קטגוריה חדשה</option></select>
+    <input id="item-new-cat" placeholder="שם קטגוריה חדשה" style="width:100%;padding:8px;margin-bottom:10px;border:1px solid var(--border2);border-radius:6px;display:none">
+    <button onclick="addNewItem()" style="width:100%;padding:10px;background:var(--accent);color:white;border:none;border-radius:6px;font-weight:600;cursor:pointer">הוסף פריט</button>
+    <hr style="margin:20px 0;border:none;border-top:1px solid var(--border2)">
+    <h3 style="margin-bottom:12px">פריטים שהוספתי</h3>
+    <div id="custom-items-list" style="max-height:400px;overflow-y:auto"></div>
+  </div>`;
+  el.innerHTML=html;
+  
+  document.getElementById('item-cat').addEventListener('change',e=>{
+    const newCatInput=document.getElementById('item-new-cat');
+    newCatInput.style.display=e.target.value==='__new__'?'block':'none';
+  });
+  
+  renderCustomItemsList();
+}
+
+function renderCustomItemsList(){
+  const list=document.getElementById('custom-items-list');
+  const custom=db.customItems||[];
+  if(!custom.length){
+    list.innerHTML='<p style="color:var(--text3);font-size:12px">אין פריטים מותאמים עדיין</p>';
+    return;
+  }
+  let html='';
+  custom.forEach((item,idx)=>{
+    html+=`<div style="padding:8px;background:var(--accent-dim);border-radius:6px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-weight:600;font-size:13px">${item.name}</div>
+        <div style="font-size:11px;color:var(--text3)">${item.cat} • ${item.qty}x</div>
+      </div>
+      <button onclick="removeCustomItem(${idx})" style="background:var(--danger,#e74c3c);color:white;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer">הסר</button>
+    </div>`;
+  });
+  list.innerHTML=html;
+}
+
+function addNewItem(){
+  const name=document.getElementById('item-name').value.trim();
+  const qty=parseInt(document.getElementById('item-qty').value)||1;
+  let cat=document.getElementById('item-cat').value;
+  
+  if(!name){alert('הזן שם פריט');return;}
+  if(!cat){alert('בחר קטגוריה');return;}
+  
+  if(cat==='__new__'){
+    cat=document.getElementById('item-new-cat').value.trim();
+    if(!cat){alert('הזן שם קטגוריה');return;}
+  }
+  
+  if(!db.customItems) db.customItems=[];
+  db.customItems.push({name,qty,cat});
+  
+  document.getElementById('item-name').value='';
+  document.getElementById('item-qty').value='';
+  document.getElementById('item-cat').value='';
+  document.getElementById('item-new-cat').value='';
+  document.getElementById('item-new-cat').style.display='none';
+  
+  renderManage();
+  saveToFirebase();
+}
+
+function removeCustomItem(idx){
+  if(!confirm('בטוח?')) return;
+  db.customItems.splice(idx,1);
+  renderManage();
+  saveToFirebase();
+}
   const el=document.getElementById('total-content');
   if(!el) return;
   let html='';
