@@ -729,7 +729,7 @@ function stepItems(){
       const allSelected=inCat.every(i=>F.items.includes(i.id));
       const someSelected=inCat.some(i=>F.items.includes(i.id));
       const isExpanded=expandedKits[cat];
-      const kitId='kit-'+cat.replace(/[^a-zA-Z0-9]/g,'-');
+      const kitId='kit-'+Object.keys(KIT_GROUPS).indexOf(cat);
       kitIdMap[kitId]=cat;
       html+=`<div class="cat-check-hdr" id="${kitId}" style="cursor:pointer" onclick="toggleKitExpand('${kitId}')">
         <span>${kitLabel} ${isExpanded?'▲':'▼'}</span>
