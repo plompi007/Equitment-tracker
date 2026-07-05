@@ -702,8 +702,25 @@ function stepItems(){
   let html=`<div class="sheet-title">פריטים → ${F.person}</div>
   <div style="font-size:11px;color:var(--accent);margin-bottom:12px;background:var(--accent-dim);padding:7px 10px;border-radius:8px;font-weight:600">סימון רחפן = שלט יוצא אוטומטית כסט</div>
   <div style="height:60px"></div>`;
+
+  // פריטים מותאמים אישית — תמיד מוצגים למעלה, פתוחים, בלי קשר לקטגוריה שלהם
+  const customInBase = ITEMS.filter(i=>i.custom&&db.items[i.id]&&db.items[i.id].status==='base'&&!db.items[i.id].worn);
+  if(customInBase.length){
+    html+=`<div class="cat-check-hdr" style="color:var(--accent);border-color:var(--accent)"><span>⭐ פריטים שהוספתי</span></div>`;
+    html+=`<div class="check-grid">`;
+    customInBase.forEach(item=>{
+      const on=F.items.includes(item.id);
+      const safeId=item.id.replace(/'/g,"\\'");
+      html+=`<div class="check-item${on?' on':''}" onclick="toggleItem('${safeId}')">
+        <div class="check-box${on?' on':''}" id="cb-${safeId}"></div>
+        <div style="flex:1"><div class="check-lbl">${item.id}</div><div style="font-size:10px;color:var(--text3)">${item.cat}</div></div>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+
   cats.forEach(cat=>{
-    const inCat=ITEMS.filter(i=>i.cat===cat&&db.items[i.id]&&db.items[i.id].status==='base'&&!db.items[i.id].worn);
+    const inCat=ITEMS.filter(i=>i.cat===cat&&!i.custom&&db.items[i.id]&&db.items[i.id].status==='base'&&!db.items[i.id].worn);
     if(!inCat.length) return;
 
     // ערכה — הצג כפריט אחד עם אפשרות פתיחה
