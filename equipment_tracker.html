@@ -327,6 +327,9 @@ const ITEMS=[
   {id:'קשר-1',cat:'ציוד נוסף'},
   {id:'סוללות-אווטה',cat:'ציוד נוסף'},
   {id:'פקפק',cat:'ציוד נוסף'},
+  // פליקנים
+  {id:'פליקן גבעת הלוס',cat:'פליקנים'},
+  {id:'פליקן מטיס 3',cat:'פליקנים'},
 ];
 
 // מיון קטגוריה בודדת לפי מספר עולה (ניתן לשימוש חוזר)
@@ -404,6 +407,7 @@ function syncCustomItemsIntoItems(){
 }
 const PEOPLE=['מטיס 1','מטיס 2','מטיס 3','לוס','מטווח 8'];
 const PARTNER_CATS=new Set(['שלטי משימה','שלטי אווטה','שלטי אלפא','שלטי FLYCART','שלטי אטטי','שלט EVO MAX']);
+const PELICAN_ITEMS = ['פליקן גבעת הלוס','פליקן מטיס 3'];
 const KEY='uav3_v1';
 let db={items:{},log:[],customLocations:[]};
 
@@ -518,12 +522,33 @@ function addToSelection(id){
       F.itemQty[id]=parseInt(qty)||1;
     }
   }
+  if(PELICAN_ITEMS.includes(id)){
+    if(F.action==='dispatch'){
+      const d5=parseInt(prompt('כמה רחפני 5" בפנים ה'+id+'?'))||0;
+      const d7=parseInt(prompt('כמה רחפני 7" בפנים?'))||0;
+      const d10=parseInt(prompt('כמה רחפני עטלף 10" בפנים?'))||0;
+      if(!F.pelicanContents) F.pelicanContents={};
+      F.pelicanContents[id]={d5,d7,d10};
+    } else if(F.action==='return'){
+      const prev=db.items[id]&&db.items[id].contents;
+      if(prev){
+        const ok=confirm(id+' — אמור לחזור עם:\n'+prev.d5+' רחפני 5"\n'+prev.d7+' רחפני 7"\n'+prev.d10+' עטלף 10"\n\nהכל תקין וחזר?');
+        if(!ok){
+          const dmg=prompt('מה קרה? (מה חסר / ניזוק)')||'';
+          if(!F.pelicanReturnIssues) F.pelicanReturnIssues={};
+          F.pelicanReturnIssues[id]=dmg;
+        }
+      }
+    }
+  }
   const partner=getPartner(id);
   if(partner && db.items[partner] && db.items[partner].status==='base' && !F.items.includes(partner))
     F.items.push(partner);
 }
 function removeFromSelection(id){
   F.items=F.items.filter(x=>x!==id);
+  if(F.pelicanContents) delete F.pelicanContents[id];
+  if(F.pelicanReturnIssues) delete F.pelicanReturnIssues[id];
   const partner=getPartner(id);
   if(partner) F.items=F.items.filter(x=>x!==partner);
 }
@@ -989,15 +1014,28 @@ function doSubmit(btn){
       });
     }
     allReturnIds.forEach(id=>{
-      const cond=F.itemCond&&F.itemCond[id]||F.cond||'ok';
+      let cond=F.itemCond&&F.itemCond[id]||F.cond||'ok';
       const isFree=id.indexOf('חופשי:')===0;
       const displayId=isFree?id.replace('חופשי:',''):id;
-      const itemNotes=(id==='פקפק'&&F.itemQty&&F.itemQty['פקפק'])?`כמות: ${F.itemQty['פקפק']}${notes?' | '+notes:''}`:(notes||'');
+      const isPelican=PELICAN_ITEMS.includes(id);
+      let pelicanNote='',faultDesc='';
+      if(isPelican&&F.action==='dispatch'&&F.pelicanContents&&F.pelicanContents[id]){
+        const c=F.pelicanContents[id];
+        pelicanNote=`תכולה: ${c.d5} רחפני 5", ${c.d7} רחפני 7", ${c.d10} עטלף 10"`;
+      }
+      if(isPelican&&F.action==='return'&&F.pelicanReturnIssues&&F.pelicanReturnIssues[id]){
+        cond='fault';
+        faultDesc=F.pelicanReturnIssues[id];
+        pelicanNote='⚠ בעיה בהחזרה: '+faultDesc;
+      }
+      const qtyNote=(id==='פקפק'&&F.itemQty&&F.itemQty['פקפק'])?`כמות: ${F.itemQty['פקפק']}`:'';
+      const itemNotes=[pelicanNote,qtyNote,notes].filter(Boolean).join(' | ');
       if(F.action==='dispatch'){
-        db.items[id]={status:cond==='fault'?'fault':'out',where:F.person,ts:t,notes:itemNotes,faultDesc:'',free:isFree,displayId};
+        const contents=isPelican?(F.pelicanContents&&F.pelicanContents[id]?F.pelicanContents[id]:(db.items[id]&&db.items[id].contents)):undefined;
+        db.items[id]={status:cond==='fault'?'fault':'out',where:F.person,ts:t,notes:itemNotes,faultDesc:'',free:isFree,displayId,contents};
         db.log.unshift({id,action:'out',person:F.person,cond,notes:itemNotes,ts:t,displayId});
       } else {
-        db.items[id]={status:cond==='fault'?'fault':'base',where:'',ts:t,notes:itemNotes,faultDesc:'',free:isFree,displayId};
+        db.items[id]={status:cond==='fault'?'fault':'base',where:'',ts:t,notes:itemNotes,faultDesc,free:isFree,displayId};
         db.log.unshift({id,action:'in',person:'',cond,notes:itemNotes,ts:t,displayId});
       }
     });
@@ -1104,7 +1142,8 @@ function renderInventory(){
       const bc=isWorn?'b-fault':s.status==='base'?'b-base':s.status==='out'?'b-out':'b-fault';
       const row=document.createElement('div');
       row.className=`item-row ${isWorn?'fault':s.status}`;
-      row.innerHTML=`<div class="item-id">${colorDot(item)}${item.id}</div><div class="item-where">${s.where||''}</div><div class="item-badge ${bc}">${sl}</div>`;
+      const contentsStr=(PELICAN_ITEMS.includes(item.id)&&s.contents)?` <span style="font-size:10px;color:var(--text3);font-weight:500">(5"×${s.contents.d5} 7"×${s.contents.d7} 10"×${s.contents.d10})</span>`:'';
+      row.innerHTML=`<div class="item-id">${colorDot(item)}${item.id}${contentsStr}</div><div class="item-where">${s.where||''}</div><div class="item-badge ${bc}">${sl}</div>`;
       row.onclick=()=>{
         if(isWorn||s.status==='base'){
           // הצג תפריט קצר
