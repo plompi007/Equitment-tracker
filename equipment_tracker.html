@@ -464,7 +464,16 @@ function initFirebase(){
 
 function save(){
   try{localStorage.setItem(KEY,JSON.stringify(db));}catch(e){}
-  try{if(fbRef) fbRef.set(db);}catch(e){}
+  function showSaveError(){
+    const st=document.getElementById('sync-status');
+    if(st){st.textContent='🔴 שגיאת שמירה';st.style.color='var(--red)';}
+  }
+  try{
+    if(fbRef){
+      const res=fbRef.set(db);
+      if(res&&res.catch) res.catch(showSaveError);
+    }
+  }catch(e){ showSaveError(); }
 }
 
 function load(){
@@ -1031,7 +1040,7 @@ function doSubmit(btn){
       const qtyNote=(id==='פקפק'&&F.itemQty&&F.itemQty['פקפק'])?`כמות: ${F.itemQty['פקפק']}`:'';
       const itemNotes=[pelicanNote,qtyNote,notes].filter(Boolean).join(' | ');
       if(F.action==='dispatch'){
-        const contents=isPelican?(F.pelicanContents&&F.pelicanContents[id]?F.pelicanContents[id]:(db.items[id]&&db.items[id].contents)):undefined;
+        const contents=isPelican?((F.pelicanContents&&F.pelicanContents[id])||(db.items[id]&&db.items[id].contents)||null):null;
         db.items[id]={status:cond==='fault'?'fault':'out',where:F.person,ts:t,notes:itemNotes,faultDesc:'',free:isFree,displayId,contents};
         db.log.unshift({id,action:'out',person:F.person,cond,notes:itemNotes,ts:t,displayId});
       } else {
