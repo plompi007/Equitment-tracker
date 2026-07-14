@@ -434,6 +434,10 @@ function initFirebase(){
     fbRef=fbDatabase.ref('tracker');
     fbRef.on('value',(snapshot)=>{
       const data=snapshot.val();
+      if(pendingWrite){
+        // יש לנו שינוי מקומי שעדיין לא אושר כנשמר — אל תדרוס אותו בנתונים ישנים
+        return;
+      }
       if(data){
         const prevDay=db.day;
         db=data;
@@ -462,16 +466,35 @@ function initFirebase(){
   }
 }
 
+let pendingWrite=false;
+let saveRetryTimer=null;
+
 function save(){
   try{localStorage.setItem(KEY,JSON.stringify(db));}catch(e){}
+  pendingWrite=true;
+  attemptFirebaseSave();
+}
+
+function attemptFirebaseSave(){
   function showSaveError(){
     const st=document.getElementById('sync-status');
-    if(st){st.textContent='🔴 שגיאת שמירה';st.style.color='var(--red)';}
+    if(st){st.textContent='🔴 לא נשמר - מנסה שוב...';st.style.color='var(--red)';}
+    if(saveRetryTimer) clearTimeout(saveRetryTimer);
+    saveRetryTimer=setTimeout(attemptFirebaseSave,4000);
+  }
+  function showSaveOk(){
+    pendingWrite=false;
+    if(saveRetryTimer){clearTimeout(saveRetryTimer);saveRetryTimer=null;}
+    const st=document.getElementById('sync-status');
+    if(st){st.textContent='🟢 מחובר';st.style.color='var(--green)';}
   }
   try{
     if(fbRef){
       const res=fbRef.set(db);
-      if(res&&res.catch) res.catch(showSaveError);
+      if(res&&res.then) res.then(showSaveOk).catch(showSaveError);
+      else pendingWrite=false;
+    } else {
+      showSaveError();
     }
   }catch(e){ showSaveError(); }
 }
