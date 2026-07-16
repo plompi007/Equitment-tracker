@@ -556,20 +556,11 @@ function addToSelection(id){
   }
   if(PELICAN_ITEMS.includes(id)){
     if(F.action==='dispatch'){
-      const d5=parseInt(prompt('כמה רחפני 5" בפנים ה'+id+'?'))||0;
-      const d7=parseInt(prompt('כמה רחפני 7" בפנים?'))||0;
-      const d10=parseInt(prompt('כמה רחפני עטלף 10" בפנים?'))||0;
-      if(!F.pelicanContents) F.pelicanContents={};
-      F.pelicanContents[id]={d5,d7,d10};
+      openPelicanContentPicker(id);
     } else if(F.action==='return'){
       const prev=db.items[id]&&db.items[id].contents;
-      if(prev){
-        const ok=confirm(id+' — אמור לחזור עם:\n'+prev.d5+' רחפני 5"\n'+prev.d7+' רחפני 7"\n'+prev.d10+' עטלף 10"\n\nהכל תקין וחזר?');
-        if(!ok){
-          const dmg=prompt('מה קרה? (מה חסר / ניזוק)')||'';
-          if(!F.pelicanReturnIssues) F.pelicanReturnIssues={};
-          F.pelicanReturnIssues[id]=dmg;
-        }
+      if(prev&&prev.ids&&prev.ids.length){
+        openPelicanReturnCheck(id);
       }
     }
   }
@@ -583,6 +574,94 @@ function removeFromSelection(id){
   if(F.pelicanReturnIssues) delete F.pelicanReturnIssues[id];
   const partner=getPartner(id);
   if(partner) F.items=F.items.filter(x=>x!==partner);
+}
+
+// ── תוכן פליקן (רחפנים בפנים) ──
+const PELICAN_DRONE_CATS=['רחפן עטלף 5','רחפן עטלף 7"','רחפן עטלף 10"'];
+
+function openPelicanContentPicker(pelicanId){
+  if(!F.pelicanContents) F.pelicanContents={};
+  if(!F.pelicanContents[pelicanId]) F.pelicanContents[pelicanId]={ids:[]};
+  const chosen=F.pelicanContents[pelicanId].ids;
+  const el=document.getElementById('sheet-content');
+  if(!el) return;
+  let html=`<div class="sheet-title">מה בפנים ${pelicanId}?</div>
+  <div style="font-size:11px;color:var(--accent);margin-bottom:12px;background:var(--accent-dim);padding:7px 10px;border-radius:8px;font-weight:600">בחר את הרחפנים הספציפיים שנמצאים בפליקן</div>`;
+  PELICAN_DRONE_CATS.forEach(cat=>{
+    const avail=ITEMS.filter(i=>i.cat===cat&&db.items[i.id]&&(db.items[i.id].status==='base'||chosen.includes(i.id))&&!db.items[i.id].worn);
+    if(!avail.length) return;
+    html+=`<div class="cat-check-hdr"><span>${cat}</span></div><div class="check-grid">`;
+    avail.forEach(item=>{
+      const on=chosen.includes(item.id);
+      const safeId=item.id.replace(/'/g,"\\'");
+      const safePid=pelicanId.replace(/'/g,"\\'");
+      html+=`<div class="check-item${on?' on':''}" onclick="togglePelicanDrone('${safePid}','${safeId}')">
+        <div class="check-box${on?' on':''}"></div>
+        <div style="flex:1"><div class="check-lbl">${colorDot(item)}${item.id}</div></div>
+      </div>`;
+    });
+    html+=`</div>`;
+  });
+  html+=`<div style="font-size:12px;color:var(--text2);margin:8px 0 4px;font-weight:600">נבחרו: ${chosen.length}</div>
+  <button class="next-btn" style="margin-top:6px" onclick="confirmPelicanContents()">אישור</button>`;
+  el.innerHTML=html;
+}
+function togglePelicanDrone(pelicanId,droneId){
+  if(!F.pelicanContents) F.pelicanContents={};
+  if(!F.pelicanContents[pelicanId]) F.pelicanContents[pelicanId]={ids:[]};
+  const arr=F.pelicanContents[pelicanId].ids;
+  const idx=arr.indexOf(droneId);
+  if(idx>=0) arr.splice(idx,1); else arr.push(droneId);
+  openPelicanContentPicker(pelicanId);
+}
+function confirmPelicanContents(){
+  renderStep();
+}
+
+// ── בדיקת החזרת פליקן ──
+function openPelicanReturnCheck(pelicanId){
+  const prev=db.items[pelicanId]&&db.items[pelicanId].contents;
+  const ids=(prev&&prev.ids)||[];
+  if(!F.pelicanReturnOk) F.pelicanReturnOk={};
+  if(!F.pelicanReturnOk[pelicanId]) F.pelicanReturnOk[pelicanId]=[...ids];
+  const okList=F.pelicanReturnOk[pelicanId];
+  const el=document.getElementById('sheet-content');
+  if(!el) return;
+  let html=`<div class="sheet-title">מה חוזר ב-${pelicanId}?</div>
+  <div style="font-size:11px;color:var(--accent);margin-bottom:12px;background:var(--accent-dim);padding:7px 10px;border-radius:8px;font-weight:600">כל הרחפנים מסומנים כברירת מחדל כחוזרים תקין. בטל סימון לרחפן שחסר/ניזוק</div>
+  <div class="check-grid">`;
+  ids.forEach(droneId=>{
+    const item=ITEMS.find(i=>i.id===droneId)||{id:droneId};
+    const on=okList.includes(droneId);
+    const safeId=droneId.replace(/'/g,"\\'");
+    const safePid=pelicanId.replace(/'/g,"\\'");
+    const issue=(F.pelicanReturnIssues&&F.pelicanReturnIssues[pelicanId]&&F.pelicanReturnIssues[pelicanId][droneId])||'';
+    html+=`<div class="check-item${on?' on':''}" onclick="togglePelicanReturnItem('${safePid}','${safeId}')">
+      <div class="check-box${on?' on':''}"></div>
+      <div style="flex:1"><div class="check-lbl">${colorDot(item)}${droneId}</div>${issue?`<div style="font-size:10px;color:var(--red)">${issue}</div>`:''}</div>
+    </div>`;
+  });
+  html+=`</div>
+  <button class="next-btn" style="margin-top:12px" onclick="confirmPelicanReturn()">אישור</button>`;
+  el.innerHTML=html;
+}
+function togglePelicanReturnItem(pelicanId,droneId){
+  const okList=F.pelicanReturnOk[pelicanId];
+  const idx=okList.indexOf(droneId);
+  if(idx>=0){
+    okList.splice(idx,1);
+    const dmg=prompt('מה קרה ל-'+droneId+'? (חסר / ניזוק — פרט)')||'';
+    if(!F.pelicanReturnIssues) F.pelicanReturnIssues={};
+    if(!F.pelicanReturnIssues[pelicanId]) F.pelicanReturnIssues[pelicanId]={};
+    F.pelicanReturnIssues[pelicanId][droneId]=dmg;
+  } else {
+    okList.push(droneId);
+    if(F.pelicanReturnIssues&&F.pelicanReturnIssues[pelicanId]) delete F.pelicanReturnIssues[pelicanId][droneId];
+  }
+  openPelicanReturnCheck(pelicanId);
+}
+function confirmPelicanReturn(){
+  renderStep();
 }
 
 // ── FLOW ──
@@ -1051,24 +1130,50 @@ function doSubmit(btn){
       const displayId=isFree?id.replace('חופשי:',''):id;
       const isPelican=PELICAN_ITEMS.includes(id);
       let pelicanNote='',faultDesc='';
-      if(isPelican&&F.action==='dispatch'&&F.pelicanContents&&F.pelicanContents[id]){
-        const c=F.pelicanContents[id];
-        pelicanNote=`תכולה: ${c.d5} רחפני 5", ${c.d7} רחפני 7", ${c.d10} עטלף 10"`;
+      if(isPelican&&F.action==='dispatch'){
+        const c=(F.pelicanContents&&F.pelicanContents[id])||(db.items[id]&&db.items[id].contents);
+        if(c&&c.ids&&c.ids.length) pelicanNote=`תכולה (${c.ids.length}): ${c.ids.join(', ')}`;
       }
-      if(isPelican&&F.action==='return'&&F.pelicanReturnIssues&&F.pelicanReturnIssues[id]){
-        cond='fault';
-        faultDesc=F.pelicanReturnIssues[id];
-        pelicanNote='⚠ בעיה בהחזרה: '+faultDesc;
+      if(isPelican&&F.action==='return'){
+        const issues=F.pelicanReturnIssues&&F.pelicanReturnIssues[id];
+        if(issues&&Object.keys(issues).length){
+          cond='fault';
+          faultDesc=Object.entries(issues).map(([did,r])=>`${did}: ${r}`).join(' | ');
+          pelicanNote='⚠ בעיה בהחזרה: '+faultDesc;
+        }
       }
       const qtyNote=(id==='פקפק'&&F.itemQty&&F.itemQty['פקפק'])?`כמות: ${F.itemQty['פקפק']}`:'';
       const itemNotes=[pelicanNote,qtyNote,notes].filter(Boolean).join(' | ');
       if(F.action==='dispatch'){
-        const contents=isPelican?((F.pelicanContents&&F.pelicanContents[id])||(db.items[id]&&db.items[id].contents)||null):null;
+        const contents=isPelican?(((F.pelicanContents&&F.pelicanContents[id])||(db.items[id]&&db.items[id].contents))||null):null;
         db.items[id]={status:cond==='fault'?'fault':'out',where:F.person,ts:t,notes:itemNotes,faultDesc:'',free:isFree,displayId,contents};
         db.log.unshift({id,action:'out',person:F.person,cond,notes:itemNotes,ts:t,displayId});
+        // הרחפנים שנארזו בפליקן — עדכן גם את הסטטוס שלהם עצמם
+        if(isPelican&&contents&&contents.ids){
+          contents.ids.forEach(droneId=>{
+            db.items[droneId]={status:'out',where:F.person,ts:t,notes:'ארוז ב'+id,faultDesc:'',free:false,displayId:droneId};
+            db.log.unshift({id:droneId,action:'out',person:F.person,cond:'ok',notes:'ארוז ב'+id,ts:t,displayId:droneId});
+          });
+        }
       } else {
         db.items[id]={status:cond==='fault'?'fault':'base',where:'',ts:t,notes:itemNotes,faultDesc,free:isFree,displayId};
         db.log.unshift({id,action:'in',person:'',cond,notes:itemNotes,ts:t,displayId});
+        // הרחפנים שהיו בפליקן — החזר כל אחד בהתאם למה שאושר/סומן כבעיה
+        if(isPelican){
+          const prevContents=db.items[id]&&db.items[id].contents;
+          const droneIds=(prevContents&&prevContents.ids)||[];
+          const okList=(F.pelicanReturnOk&&F.pelicanReturnOk[id])||droneIds;
+          const issues=(F.pelicanReturnIssues&&F.pelicanReturnIssues[id])||{};
+          droneIds.forEach(droneId=>{
+            if(issues[droneId]){
+              db.items[droneId]={status:'fault',where:'',ts:t,notes:'',faultDesc:issues[droneId],free:false,displayId:droneId};
+              db.log.unshift({id:droneId,action:'in',person:'',cond:'fault',notes:issues[droneId],ts:t,displayId:droneId});
+            } else if(okList.includes(droneId)){
+              db.items[droneId]={status:'base',where:'',ts:t,notes:'',faultDesc:'',free:false,displayId:droneId};
+              db.log.unshift({id:droneId,action:'in',person:'',cond:'ok',notes:'',ts:t,displayId:droneId});
+            }
+          });
+        }
       }
     });
   }
@@ -1152,8 +1257,15 @@ function renderHeader(){
     if(s.status==='out') o++;
     if(s.status==='fault'||s.worn===true) f++;
   });
-  document.getElementById('hdr-out').textContent='בשטח: '+o;
-  document.getElementById('hdr-fault').textContent='תקלות: '+f;
+  let freeOut=0,freeFault=0;
+  Object.keys(db.items||{}).forEach(id=>{
+    if(id.indexOf('חופשי:')!==0) return;
+    const s=db.items[id];
+    if(s.status==='out') freeOut++;
+    if(s.status==='fault') freeFault++;
+  });
+  document.getElementById('hdr-out').textContent='בשטח: '+(o+freeOut);
+  document.getElementById('hdr-fault').textContent='תקלות: '+(f+freeFault);
   document.getElementById('sn-base').textContent=ITEMS.length-o-f;
   document.getElementById('sn-out').textContent=o;
   document.getElementById('sn-fault').textContent=f;
@@ -1174,7 +1286,7 @@ function renderInventory(){
       const bc=isWorn?'b-fault':s.status==='base'?'b-base':s.status==='out'?'b-out':'b-fault';
       const row=document.createElement('div');
       row.className=`item-row ${isWorn?'fault':s.status}`;
-      const contentsStr=(PELICAN_ITEMS.includes(item.id)&&s.contents)?` <span style="font-size:10px;color:var(--text3);font-weight:500">(5"×${s.contents.d5} 7"×${s.contents.d7} 10"×${s.contents.d10})</span>`:'';
+      const contentsStr=(PELICAN_ITEMS.includes(item.id)&&s.contents&&s.contents.ids&&s.contents.ids.length)?` <span style="font-size:10px;color:var(--text3);font-weight:500">(${s.contents.ids.length} רחפנים בפנים)</span>`:'';
       row.innerHTML=`<div class="item-id">${colorDot(item)}${item.id}${contentsStr}</div><div class="item-where">${s.where||''}</div><div class="item-badge ${bc}">${sl}</div>`;
       row.onclick=()=>{
         if(isWorn||s.status==='base'){
