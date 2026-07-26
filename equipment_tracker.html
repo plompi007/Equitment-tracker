@@ -861,7 +861,8 @@ let kitIdMap = {};
 function toggleKitExpand(kitId){
   const cat=kitIdMap[kitId];
   if(!cat) return;
-  expandedKits[cat]=!expandedKits[cat];
+  const current=expandedKits[cat]!==false;
+  expandedKits[cat]=!current;
   renderStep();
 }
 
@@ -910,7 +911,7 @@ function stepItems(){
       const kitLabel=KIT_GROUPS[cat];
       const allSelected=inCat.every(i=>F.items.includes(i.id));
       const someSelected=inCat.some(i=>F.items.includes(i.id));
-      const isExpanded=expandedKits[cat];
+      const isExpanded=expandedKits[cat]!==false;
       const kitId='kit-'+Object.keys(KIT_GROUPS).indexOf(cat);
       kitIdMap[kitId]=cat;
       html+=`<div class="cat-check-hdr" id="${kitId}" style="cursor:pointer" onclick="toggleKitExpand('${kitId}')">
