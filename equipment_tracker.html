@@ -1087,7 +1087,7 @@ function stepItems(){
           const label=item.id.replace(cat.includes('7')?'ערכה-7-':'ערכה-8-','').replace(/-/g,' ');
           html+=`<div class="check-item${on?' on':''}" onclick="toggleItem('${escId(item.id)}')">
             <div class="check-box${on?' on':''}" id="cb-${item.id}"></div>
-            <div style="flex:1"><div class="check-lbl" style="font-size:12px">${label}</div></div>
+            <div style="flex:1"><div class="check-lbl" style="font-size:12px">${colorDot(item)}${label}</div></div>
           </div>`;
         });
         html+=`</div>`;
