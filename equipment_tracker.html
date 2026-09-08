@@ -264,14 +264,6 @@ const ITEMS=[
   // שלטי אלפא
   
   {id:'שלט-אלפא-385',cat:'שלטי אלפא'},{id:'שלט-אלפא-485',cat:'שלטי אלפא'},{id:'שלט-אלפא-706',cat:'שלטי אלפא'},{id:'שלט-אלפא-707',cat:'שלטי אלפא'},
-  // מתקני הטלה בומרנג
-  {id:'מתקן-בומרנג-224',cat:'מתקני הטלה בומרנג'},
-  
-  
-  {id:'מתקן-בומרנג-383',cat:'מתקני הטלה בומרנג'},
-  {id:'מתקן-בומרנג-384',cat:'מתקני הטלה בומרנג'},
-  {id:'אנטנת-אלפא',cat:'מתקני הטלה בומרנג'},
-  {id:'תיק-הטלות-שחור',cat:'מתקני הטלה בומרנג'},
   // FLYCART3
   {id:'flycart-13',cat:'FLYCART3'},{id:'flycart-56',cat:'FLYCART3'},{id:'flycart-88',cat:'FLYCART3'},
   {id:'שלט-flycart-13',cat:'שלטי FLYCART'},{id:'שלט-flycart-53',cat:'שלטי FLYCART'},{id:'שלט-flycart-2000',cat:'שלטי FLYCART'},{id:'שלט-flycart-20000',cat:'שלטי FLYCART'},
@@ -446,7 +438,7 @@ const ITEMS=[
   // ציוד מיוחד (לא מחויל)
   {id:'בלקברי חברת קלע',cat:'ציוד מיוחד (לא מחויל)'},
   // מתקני הטלה אלפא
-  {id:'מתקן-60מ"מ-אלפא-348',cat:'מתקני הטלה אלפא'},{id:'מתקן-60מ"מ-אלפא-383',cat:'מתקני הטלה אלפא'},{id:'מתקן-60מ"מ-אלפא-384',cat:'מתקני הטלה אלפא'},
+  {id:'מתקן-60מ"מ-אלפא-348',cat:'מתקני הטלה אלפא'},{id:'מתקן-60מ"מ-אלפא-383',cat:'מתקני הטלה אלפא'},{id:'מתקן-60מ"מ-אלפא-384',cat:'מתקני הטלה אלפא'},{id:'אנטנת-אלפא',cat:'מתקני הטלה אלפא'},
   // טלפונים (למלאי בלבד, לא להעמסה)
   {id:'XCOVER6PRO-102310081',cat:'טלפונים'},
   {id:'XCOVER6PRO-102310093',cat:'טלפונים'},
@@ -474,7 +466,6 @@ const ITEMS=[
   {id:'רמקול',cat:'מחשבים'},
   {id:'מצלמה',cat:'מחשבים'},
   {id:'מקח',cat:'מחשבים'},
-  {id:'אולר 1',cat:'מחשבים'},{id:'אולר 2',cat:'מחשבים'},{id:'אולר 3',cat:'מחשבים'},
   {id:'מארז הקחשה אולר 1',cat:'מחשבים'},{id:'מארז הקחשה אולר 2',cat:'מחשבים'},{id:'מארז הקחשה אולר 3',cat:'מחשבים'},
   {id:'כרטיס זכרון אולר 1',cat:'מחשבים'},{id:'כרטיס זכרון אולר 2',cat:'מחשבים'},{id:'כרטיס זכרון אולר 3',cat:'מחשבים'},
   {id:'טל 100',cat:'מחשבים'},
@@ -498,6 +489,8 @@ const ITEMS=[
   {id:'סילוורדו-241520',cat:'רכבים'},
   {id:'סילוורדו-241522',cat:'רכבים'},
   {id:'סילוורדו-241516',cat:'רכבים'},
+  // אולרים
+  {id:'אולר 2',cat:'אולרים'},{id:'אולר 3',cat:'אולרים'},{id:'אולר 4',cat:'אולרים'},
   // Matrice לא מחויל (למלאי בלבד, לא להעמסה)
   {id:'עמדת הטענת סוללות Matrice 350',cat:'Matrice לא מחויל'},
   {id:'סוללת Matrice 350 לא מחויל 1',cat:'Matrice לא מחויל'},
@@ -551,6 +544,7 @@ const ITEMS=[
   {id:'מטען פלייקארט 1',cat:'FLYCART3'},{id:'מטען פלייקארט 2',cat:'FLYCART3'},
   {id:'מטען פלייקארט 3',cat:'FLYCART3'},{id:'מטען פלייקארט 4',cat:'FLYCART3'},
   {id:'מטען פלייקארט 5',cat:'FLYCART3'},
+  {id:'תיק-הטלות-שחור',cat:'ציוד נוסף'},
   // מערכת מב"ן חישה (הגנמ"י)
   {id:'מח 721 (צ\' 7070201)',cat:'מב"ן חישה'},
   {id:'אנטנה 721ח\'',cat:'מב"ן חישה'},
@@ -592,6 +586,10 @@ const COLOR_MAP = {
   '1843':'#2563eb','1968':'#2563eb','1978':'#2563eb','2024':'#2563eb','2035':'#2563eb','2042':'#2563eb','2044':'#2563eb','2060':'#2563eb','2071':'#2563eb','2074':'#2563eb','2079':'#2563eb','2085':'#2563eb','2095':'#2563eb','2097':'#2563eb','2101':'#2563eb','2105':'#2563eb','2113':'#2563eb','2121':'#2563eb',
 };
 ITEMS.forEach(i=>{ if(COLOR_MAP[i.id]) i.color=COLOR_MAP[i.id]; });
+// מנקה קידומת פנימית של פריטי ערכה (למשל 'ערכה-9-מטען-סוללות' → 'מטען סוללות'), לא נוגע ב-IDs רגילים
+function cleanLabel(id){
+  return /^ערכה-\d+-/.test(id) ? id.replace(/^ערכה-\d+-/,'').replace(/-/g,' ') : id;
+}
 function colorDot(item){
   return item.color?`<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${item.color};margin-left:6px;vertical-align:middle;flex-shrink:0"></span>`:'';
 }
@@ -957,13 +955,16 @@ function renderStep(){
     else if(step===1) el.innerHTML=stepPerson();
     else if(step===2) el.innerHTML=stepTransferFromItems();
     else if(step===3) el.innerHTML=stepTransferDest();
+    else if(step===4) el.innerHTML=stepReview();
   } else if(F.action==='dispatch'){
     if(step===0) el.innerHTML=stepAction();
     else if(step===1) el.innerHTML=stepPerson();
     else if(step===2) el.innerHTML=stepItems();
+    else if(step===3) el.innerHTML=stepReview();
   } else {
     if(step===0) el.innerHTML=stepAction();
     else if(step===1) el.innerHTML=stepReturnItems();
+    else if(step===2) el.innerHTML=stepReview();
   }
 
   // כפתור המשך צף
@@ -1022,9 +1023,10 @@ function floatNext(){
       alert('לא נבחרו רחפנים בתוך '+emptyPelican+'! לחץ על הפליקן ברשימה כדי לבחור מה בפנים לפני שממשיכים.');
       return;
     }
+    step=3; renderStep(); return;
   }
-  if(F.action==='transfer'){ step=3; renderStep(); }
-  else doSubmit(null);
+  if(F.action==='transfer'){ step=3; renderStep(); return; }
+  step=2; renderStep();
 }
 
 function setItemCond(id,cond,btn){
@@ -1125,8 +1127,7 @@ const CAT_ORDER = [
   // אלפא
   'רחפני אלפא','מתקני הטלה אלפא',
   // בומרנג
-  'מתקני הטלה בומרנג',
-  // --- כל משפחת ה-FPV/עטלף ביחד ---
+    // --- כל משפחת ה-FPV/עטלף ביחד ---
   'רחפן עטלף 5','רחפן עטלף 7"','רחפן עטלף 10"','עטלף XTEND 10"',
   'ערכת עטלף 1','ערכת עטלף 2','ערכת עטלף 3','ערכת עטלף 4','ערכת עטלף 5','ערכת עטלף 6','התקן אלקטרו מכאני',
   // EVOMAX
@@ -1189,7 +1190,7 @@ function stepItems(){
         html+=`<div class="check-grid">`;
         inCat.forEach(item=>{
           const on=F.items.includes(item.id);
-          const label=item.id.replace(/^ערכה-\d+-/,'').replace(/-/g,' ');
+          const label=cleanLabel(item.id);
           html+=`<div class="check-item${on?' on':''}" onclick="toggleItem('${escId(item.id)}')">
             <div class="check-box${on?' on':''}" id="cb-${item.id}"></div>
             <div style="flex:1"><div class="check-lbl" style="font-size:12px">${colorDot(item)}${label}</div></div>
@@ -1278,7 +1279,7 @@ function stepTransferDest(){
   return`<div class="sheet-title">לאן מועברים?</div>
   <div class="person-grid">${btns}</div>
   <input class="person-other" id="dest-inp" placeholder="מיקום אחר..." value="${F.transferDest&&!PEOPLE.includes(F.transferDest)?F.transferDest:''}" oninput="selTransferDest(this.value.trim())">
-  <button class="next-btn" id="next-dest" onclick="doSubmit(null)" ${F.transferDest?'':'disabled'}>שמור</button>
+  <button class="next-btn" id="next-dest" onclick="step=4;renderStep()" ${F.transferDest?'':'disabled'}>המשך</button>
   <button class="back-btn" onclick="step=2;renderStep()">חזרה</button>`;
 }
 
@@ -1393,6 +1394,17 @@ function markOk(id){
   save();renderAll();closeSheet();
 }
 
+function stepReview(){
+  const t=now();
+  const previewMsg=buildWhatsappMsg(t,'','');
+  const msgHtml=previewMsg.replace(/\*([^*]+)\*/g,'<b>$1</b>');
+  const backStep=F.action==='dispatch'?2:F.action==='transfer'?3:1;
+  return`<div class="sheet-title">בדוק לפני שליחה</div>
+  <div style="background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:12px;font-size:13px;line-height:1.8;white-space:pre-wrap;margin-bottom:14px;direction:rtl">${msgHtml}</div>
+  <textarea class="notes" id="notes-txt" placeholder="הערות (סוללות, ציוד נלווה...)"></textarea>
+  <button class="next-btn" style="margin-top:10px" onclick="doSubmit(this)">✓ אשר ושלח</button>
+  <button class="back-btn" onclick="step=${backStep};renderStep()">→ חזור לעריכה</button>`;
+}
 function doSubmit(btn){
   const t=now();
   const notes=(document.getElementById('notes-txt')||{}).value||'';
@@ -1513,10 +1525,10 @@ function buildWhatsappMsg(t, faultDesc, notes){
     var partnerSel = partner && F.items.indexOf(partner)>=0;
     if(isMain && partnerSel){
       shownPartners[partner]=true;
-      byCat[cat].push(RLM+'\u2022 '+id+' + \u05E9\u05DC\u05D8');
+      byCat[cat].push(RLM+'\u2022 '+cleanLabel(id)+' + \u05E9\u05DC\u05D8');
     } else {
       var qty = (id==='\u05E4\u05E7\u05E4\u05E7'&&F.itemQty&&F.itemQty['\u05E4\u05E7\u05E4\u05E7']) ? ' x'+F.itemQty['\u05E4\u05E7\u05E4\u05E7'] : '';
-      byCat[cat].push(RLM+'\u2022 '+id+qty);
+      byCat[cat].push(RLM+'\u2022 '+cleanLabel(id)+qty);
     }
   });
   var parts = [action+' | '+t, loc, ''];
@@ -1810,10 +1822,6 @@ const TOTAL_INVENTORY = [
     {name:'מטען סוללה; רחפן אלפא', qty:4},
     {name:'מארז רחפן אלפא', qty:4},
   ]},
-  {cat:'מתקני הטלה בומרנג', items:[
-    {name:'מתקן הטלה, 60 מ"מ; רחפן אלפא', qty:3},
-    {name:'מארז שינוע; התקן ברמרנג', qty:3},
-  ]},
   {cat:'FLYCART3', items:[
     {name:'כלי טיס; FLYCART30', qty:3},
     {name:'שלט רחוק; רחפן FLYCART', qty:3},
@@ -1959,6 +1967,10 @@ function renderManage(){
   cats.forEach(c=>html+=`<option value="${c}">${c}</option>`);
   html+=`<option value="__new__">+ קטגוריה חדשה</option></select>
     <input id="item-new-cat" placeholder="שם קטגוריה חדשה" style="width:100%;padding:8px;margin-bottom:10px;border:1px solid var(--border2);border-radius:6px;display:none">
+    <label style="display:flex;align-items:center;gap:6px;margin-bottom:12px;font-size:13px;color:var(--text2)">
+      <input type="checkbox" id="item-has-controller" style="width:16px;height:16px">
+      כולל שלט - הוסף אוטומטית לקטגוריית השלטים וצמד אליו
+    </label>
     <button onclick="addNewItem()" style="width:100%;padding:10px;background:var(--accent);color:white;border:none;border-radius:6px;font-weight:600;cursor:pointer">הוסף פריט</button>
     <hr style="margin:20px 0;border:none;border-top:1px solid var(--border2)">
     <h3 style="margin-bottom:12px">פריטים שהוספתי</h3>
@@ -1969,6 +1981,20 @@ function renderManage(){
   document.getElementById('item-cat').addEventListener('change',e=>{
     const newCatInput=document.getElementById('item-new-cat');
     newCatInput.style.display=e.target.value==='__new__'?'block':'none';
+    // זוכר את דפוס השם האחרון שהוזן לקטגוריה הזו — כדי שיהיה צריך להוסיף רק את המספר
+    const pattern=(db.categoryNamePatterns||{})[e.target.value];
+    const nameInput=document.getElementById('item-name');
+    if(pattern){
+      nameInput.value=pattern;
+      const m=pattern.match(/\d+$/);
+      nameInput.focus();
+      if(m){
+        const start=pattern.length-m[0].length;
+        nameInput.setSelectionRange(start,pattern.length);
+      } else {
+        nameInput.setSelectionRange(0,pattern.length);
+      }
+    }
   });
   
   renderCustomItemsList();
@@ -1998,6 +2024,7 @@ function addNewItem(){
   const name=document.getElementById('item-name').value.trim();
   const qty=parseInt(document.getElementById('item-qty').value)||1;
   let cat=document.getElementById('item-cat').value;
+  const hasController=document.getElementById('item-has-controller').checked;
   
   if(!name){alert('הזן שם פריט');return;}
   if(!cat){alert('בחר קטגוריה');return;}
@@ -2010,12 +2037,32 @@ function addNewItem(){
   if(!db.customItems) db.customItems=[];
   const ids=addCustomItemToInventory(name,qty,cat);
   db.customItems.push({name,qty,cat,ids});
+
+  // זוכר את דפוס השם לפעם הבאה שמוסיפים לקטגוריה הזו
+  if(!db.categoryNamePatterns) db.categoryNamePatterns={};
+  db.categoryNamePatterns[cat]=name;
+
+  // אם כולל שלט — יוצר אוטומטית פריט שלט מצומד בקטגוריית השלטים
+  if(hasController){
+    const ctrlCat=cat.indexOf('רחפני ')===0 ? 'שלטי '+cat.slice(6) : 'שלטי '+cat;
+    const ctrlIds=[];
+    ids.forEach(id=>{
+      const ctrlId='שלט-'+id;
+      ITEMS.push({id:ctrlId,cat:ctrlCat,custom:true});
+      if(!db.items[ctrlId]) db.items[ctrlId]={status:'base',where:'',ts:'',notes:'',faultDesc:''};
+      SET_PAIRS[id]=ctrlId;
+      SET_PAIRS_REV[ctrlId]=id;
+      ctrlIds.push(ctrlId);
+    });
+    db.customItems.push({name:'שלט-'+name,qty,cat:ctrlCat,ids:ctrlIds});
+  }
   
   document.getElementById('item-name').value='';
   document.getElementById('item-qty').value='';
   document.getElementById('item-cat').value='';
   document.getElementById('item-new-cat').value='';
   document.getElementById('item-new-cat').style.display='none';
+  document.getElementById('item-has-controller').checked=false;
   
   renderManage();
   renderAll();
@@ -2030,6 +2077,9 @@ function removeCustomItem(idx){
       const pos=ITEMS.findIndex(it=>it.id===id);
       if(pos>=0) ITEMS.splice(pos,1);
       if(db.items&&db.items[id]) delete db.items[id];
+      // ניקוי צימוד שלט אם היה
+      if(SET_PAIRS[id]){ delete SET_PAIRS_REV[SET_PAIRS[id]]; delete SET_PAIRS[id]; }
+      if(SET_PAIRS_REV[id]){ delete SET_PAIRS[SET_PAIRS_REV[id]]; delete SET_PAIRS_REV[id]; }
     });
   }
   db.customItems.splice(idx,1);
@@ -2045,7 +2095,7 @@ const DAY_CATS = [
   {key:'atati',   label:'רחפני אטטי'},
   {key:'alpha',   label:'רחפני אלפא'},
   {key:'evomax',  label:'מתקני EVOMAX'},
-  {key:'bomrang', label:'מתקני בומרנג'},  {key:'kb',      label:'מתקני כדור ברזל'},
+  {key:'kb',      label:'מתקני כדור ברזל'},
   {key:'fpv',     label:'ציוד FPV'},
   {key:'other',   label:'ציוד נוסף'},
 ];
@@ -2056,7 +2106,6 @@ const CAT_TO_ITEM_CAT = {
   'atati':   'רחפני אטטי',
   'alpha':   'רחפני אלפא',
   'evomax':  'מתקני הטלה EVOMAX',
-  'bomrang':  'מתקני הטלה בומרנג',
   'fpv':     'FLYCART3',
 };
 
