@@ -555,10 +555,14 @@ const ITEMS=[
 ];
 
 // מיון קטגוריה בודדת לפי מספר עולה (ניתן לשימוש חוזר)
+// פריטים ספציפיים שצריך שיישארו תמיד בתחתית הקטגוריה שלהם (לא כלל כללי — רק אלה)
+const FORCE_BOTTOM_IDS=new Set(['M-2888','M-2737','M-2915','M-2596','M-2695']);
 function sortCategoryItems(cat){
   const idx=[], items=[];
   ITEMS.forEach((item,i)=>{ if(item.cat===cat){idx.push(i);items.push(item);} });
   items.sort((a,b)=>{
+    const fa=FORCE_BOTTOM_IDS.has(a.id), fb=FORCE_BOTTOM_IDS.has(b.id);
+    if(fa!==fb) return fa?1:-1;
     const na=parseFloat(a.id.replace(/[^\d.]/g,''))||0;
     const nb=parseFloat(b.id.replace(/[^\d.]/g,''))||0;
     return na-nb;
