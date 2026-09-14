@@ -387,6 +387,10 @@ const ITEMS=[
   {id:'1741 (רחפן 2939)',cat:'התקן אלקטרו מכאני'},
   {id:'2181 (רחפן 2547)',cat:'התקן אלקטרו מכאני'},
   {id:'2215 (רחפן 2889)',cat:'התקן אלקטרו מכאני'},
+  {id:'2950 (רחפן 2101)',cat:'התקן אלקטרו מכאני'},
+  {id:'1801 (רחפן 2989)',cat:'התקן אלקטרו מכאני'},
+  {id:'1947 (רחפן 2867)',cat:'התקן אלקטרו מכאני'},
+  {id:'1918 (רחפן 2921)',cat:'התקן אלקטרו מכאני'},
   // Matrice
   {id:'Matrice 350',cat:'רחפני Matrice'},
   {id:'Matrice 4T',cat:'רחפני Matrice'},
@@ -607,7 +611,7 @@ function colorDotById(id){
   return it?colorDot(it):'';
 }
 // רחפני עטלף 10" ללא התקן אלקטרו מכני מצומד — לא בשימוש כרגע (הכשרה בלבד)
-const DEVICE_10IN_IDS=new Set(['2547','2628','2751','2821','2838','2889','2939']);
+const DEVICE_10IN_IDS=new Set(['2547','2628','2751','2821','2838','2867','2889','2921','2939','2989']);
 function notInUseTag(item){
   if(item.cat!=='רחפן עטלף 10"') return '';
   const num=item.id.replace('עטלף-','');
@@ -661,7 +665,7 @@ function syncCustomItemsIntoItems(){
     sortCategoryItems(ci.cat);
   });
 }
-const PEOPLE=['מטיס 1','מטיס 2','מטיס 3','לוס','מטווח 8'];
+const PEOPLE=['מטיס 1','FPV','מעבדה','להחלפה','אמיר','מאיה','רומן','שיעור כיתה','פלייקארט','אווטה'];
 const PARTNER_CATS=new Set(['שלטי משימה','שלטי אווטה','שלטי אלפא','שלטי FLYCART','שלטי אטטי','שלט EVO MAX']);
 // קטגוריות "לא מחויל" — מוצגות במלאי אבל לא ניתנות להעמסה/החתמה כלל
 const NO_DISPATCH_CATS=new Set(['רחפני איבו (לא מחויל)','אווטה לא מחויל','ערכות לא מחויל','עמוס (לא מחויל)','אבזור לא מחויל','בדמינטון (לא מחויל)','חימוש בומרנג (לא מחויל)','ציוד מיוחד (לא מחויל)','טלפונים','מחשבים','ציוד רכב','ציוד ניווט','ציוד תקשורת','רכבים','Matrice לא מחויל','רחפני Mavic (לא מחויל)','FLYCART לא מחויל','ציוד נוסף לא מחויל']);
@@ -1093,12 +1097,20 @@ function stepPerson(){
   const locs=getLocations();
   const btns=locs.map(p=>`<button class="person-btn${F.person===p?' on':''}" onclick="selPerson('${escId(p)}')">${p}</button>`).join('');
   const multiBtn = F.action==='dispatch' ? `<button class="back-btn" style="margin-top:10px;border-color:var(--accent);color:var(--accent)" onclick="startMultiDest()">🔀 מוציא למספר מקומות במקביל</button>` : '';
+  const clearBtn = (db.customLocations&&db.customLocations.length) ? `<button class="back-btn" style="margin-top:6px;font-size:11px;color:var(--text3);border-color:var(--border2)" onclick="clearCustomLocations()">🗑️ נקה יעדים ישנים שהצטברו (${db.customLocations.length})</button>` : '';
   return`<div class="sheet-title">${title}</div>
   <div class="person-grid">${btns}</div>
   <input class="person-other" id="other-inp" placeholder="מיקום חדש..." value="${locs.includes(F.person)?'':F.person}" oninput="F.person=this.value.trim();updateNext1()">
   <button class="next-btn" id="next1" onclick="step=2;renderStep()" ${F.person?'':'disabled'}>המשך</button>
   ${multiBtn}
+  ${clearBtn}
   <button class="back-btn" onclick="step=0;renderStep()">חזרה</button>`;
+}
+function clearCustomLocations(){
+  if(!confirm('לנקות את כל היעדים המותאמים שהצטברו? (המקומות הקבועים ברשימה יישארו)')) return;
+  db.customLocations=[];
+  save();
+  renderStep();
 }
 function startMultiDest(){
   F.multiDest=true;
@@ -1449,7 +1461,10 @@ function stepAssignDest(){
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
       ${locs.map(l=>`<button type="button" onclick="bulkAssignDest('${escId(l)}')" style="padding:8px 12px;border-radius:16px;border:1px solid var(--accent);background:transparent;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer">${l}</button>`).join('')}
     </div>
-    <input placeholder="או הקלד יעד חדש ואשר Enter..." id="bulk-dest-inp" style="width:100%;padding:8px;border:1px solid var(--border2);border-radius:6px;font-size:13px;box-sizing:border-box;margin-bottom:12px" onkeydown="if(event.key==='Enter'){bulkAssignDest(this.value.trim());}">`;
+    <div style="display:flex;gap:6px;margin-bottom:12px">
+      <input placeholder="או הקלד יעד חדש..." id="bulk-dest-inp" style="flex:1;padding:8px;border:1px solid var(--border2);border-radius:6px;font-size:13px;box-sizing:border-box" oninput="F.bulkDestVal=this.value.trim()" onkeydown="if(event.key==='Enter'){event.preventDefault();bulkAssignDest((F.bulkDestVal||this.value.trim()));}">
+      <button type="button" onclick="bulkAssignDest(F.bulkDestVal||document.getElementById('bulk-dest-inp').value.trim())" style="padding:8px 16px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">✓ הוסף</button>
+    </div>`;
   }
 
   html+=`<button class="next-btn" onclick="confirmAssignDest()" ${allAssigned?'':'disabled'}>${allAssigned?'המשך':'סמן יעד לכל הפריטים כדי להמשיך'}</button>
@@ -1467,6 +1482,7 @@ function bulkAssignDest(dest){
   if(!F.itemDest) F.itemDest={};
   (F.destSelection||[]).forEach(id=>{ F.itemDest[id]=dest; });
   F.destSelection=[];
+  F.bulkDestVal='';
   renderStep();
 }
 function confirmAssignDest(){
