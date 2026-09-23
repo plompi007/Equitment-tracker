@@ -7,6 +7,13 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>מעקב ציוד</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2563eb">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="מעקב ציוד">
+<link rel="icon" href="icon-192.png">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap');
 :root {
@@ -2483,9 +2490,16 @@ if(checkAuth()){
   renderAll();
   initFirebase();
 }
-document.getElementById('sheet-bg').addEventListener('click', function(e){
+var sheetBgEl=document.getElementById('sheet-bg');
+if(sheetBgEl) sheetBgEl.addEventListener('click', function(e){
   if(e.target===this) closeSheet();
 });
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('service-worker.js').catch(function(){});
+  });
+}
 </script>
 </body>
 </html>
