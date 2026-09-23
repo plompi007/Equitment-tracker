@@ -634,6 +634,10 @@ function v2Tag(item){
 function escId(s){
   return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
 }
+// בטוח להצגה כטקסט/תוכן HTML (כולל בתוך value="...") — מונע הזרקת קוד מטקסט חופשי שמשתמשים מזינים (הערות, מיקומים, שמות פריטים)
+function escapeHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 // בטוח להטמעה בתוך onclick="fn(JSON, ...)" — כל התוכן כולל מרכאות ה-JSON עצמן
 function escJson(arr){
   return JSON.stringify(arr).replace(/"/g,'&quot;');
@@ -877,7 +881,7 @@ function openPelicanContentPicker(pelicanId){
       const safePid=escId(pelicanId);
       html+=`<div class="check-item${on?' on':''}" onclick="togglePelicanDrone('${safePid}','${safeId}')">
         <div class="check-box${on?' on':''}"></div>
-        <div style="flex:1"><div class="check-lbl">${colorDot(item)}${item.id}</div></div>
+        <div style="flex:1"><div class="check-lbl">${colorDot(item)}${escapeHtml(item.id)}</div></div>
       </div>`;
     });
     html+=`</div>`;
@@ -926,7 +930,7 @@ function openPelicanReturnCheck(pelicanId){
     const issue=(F.pelicanReturnIssues&&F.pelicanReturnIssues[pelicanId]&&F.pelicanReturnIssues[pelicanId][droneId])||'';
     html+=`<div class="check-item${on?' on':''}" onclick="togglePelicanReturnItem('${safePid}','${safeId}')">
       <div class="check-box${on?' on':''}"></div>
-      <div style="flex:1"><div class="check-lbl">${colorDot(item)}${droneId}</div>${issue?`<div style="font-size:10px;color:var(--red)">${issue}</div>`:''}</div>
+      <div style="flex:1"><div class="check-lbl">${colorDot(item)}${escapeHtml(droneId)}</div>${issue?`<div style="font-size:10px;color:var(--red)">${escapeHtml(issue)}</div>`:''}</div>
     </div>`;
   });
   html+=`</div>
@@ -1034,7 +1038,7 @@ function addFreeEntry(){
   if(list){
     const el=document.createElement('div');
     el.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:6px 4px;border-bottom:1px solid var(--border2)';
-    el.innerHTML=`<span style="font-size:13px;font-weight:600">${val}</span><button onclick="removeFreeEntry('${escId(freeId)}',this.parentElement)" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer">✕</button>`;
+    el.innerHTML=`<span style="font-size:13px;font-weight:600">${escapeHtml(val)}</span><button onclick="removeFreeEntry('${escId(freeId)}',this.parentElement)" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer">✕</button>`;
     list.appendChild(el);
   }
   const btn=document.getElementById('float-next-btn');
@@ -1079,15 +1083,15 @@ function stepTransferFromItems(){
   const outItems=ITEMS.filter(i=>db.items[i.id]&&(db.items[i.id].status==='out'||db.items[i.id].status==='fault')&&db.items[i.id].where===F.person).map(i=>({id:i.id,displayId:i.id}));
   const freeItems=Object.keys(db.items||{}).filter(id=>id.indexOf('חופשי:')===0&&db.items[id].where===F.person&&(db.items[id].status==='out'||db.items[id].status==='fault')).map(id=>({id,displayId:db.items[id].displayId||id.replace('חופשי:','')}));
   const allItems=[...outItems,...freeItems];
-  if(!allItems.length) return`<div class="sheet-title">העברה</div><div class="empty">אין ציוד ב${F.person}</div><button class="back-btn" onclick="step=1;renderStep()">חזרה</button>`;
-  let html=`<div class="sheet-title">מה מועבר מ${F.person}?</div><div style="height:60px"></div>`;
+  if(!allItems.length) return`<div class="sheet-title">העברה</div><div class="empty">אין ציוד ב${escapeHtml(F.person)}</div><button class="back-btn" onclick="step=1;renderStep()">חזרה</button>`;
+  let html=`<div class="sheet-title">מה מועבר מ${escapeHtml(F.person)}?</div><div style="height:60px"></div>`;
   html+=`<div class="check-grid">`;
   allItems.forEach(item=>{
     const on=F.items.includes(item.id);
     const safeId=escId(item.id);
     html+=`<div class="check-item${on?' on':''}" onclick="toggleItem('${safeId}')">
       <div class="check-box${on?' on':''}" id="cb-${safeId}"></div>
-      <div style="flex:1"><div class="check-lbl">${item.displayId}</div></div>
+      <div style="flex:1"><div class="check-lbl">${escapeHtml(item.displayId)}</div></div>
     </div>`;
   });
   html+=`</div><div style="height:70px"></div>`;
@@ -1109,12 +1113,12 @@ function stepAction(){
 function stepPerson(){
   const title = F.action==='transfer' ? 'מאיפה?' : 'לאן יורד הציוד?';
   const locs=getLocations();
-  const btns=locs.map(p=>`<button class="person-btn${F.person===p?' on':''}" onclick="selPerson('${escId(p)}')">${p}</button>`).join('');
+  const btns=locs.map(p=>`<button class="person-btn${F.person===p?' on':''}" onclick="selPerson('${escId(p)}')">${escapeHtml(p)}</button>`).join('');
   const multiBtn = F.action==='dispatch' ? `<button class="back-btn" style="margin-top:10px;border-color:var(--accent);color:var(--accent)" onclick="startMultiDest()">🔀 מוציא למספר מקומות במקביל</button>` : '';
   const clearBtn = (db.customLocations&&db.customLocations.length) ? `<button class="back-btn" style="margin-top:6px;font-size:11px;color:var(--text3);border-color:var(--border2)" onclick="clearCustomLocations()">🗑️ נקה יעדים ישנים שהצטברו (${db.customLocations.length})</button>` : '';
   return`<div class="sheet-title">${title}</div>
   <div class="person-grid">${btns}</div>
-  <input class="person-other" id="other-inp" placeholder="מיקום חדש..." value="${locs.includes(F.person)?'':F.person}" oninput="F.person=this.value.trim();updateNext1()">
+  <input class="person-other" id="other-inp" placeholder="מיקום חדש..." value="${escapeHtml(locs.includes(F.person)?'':F.person)}" oninput="F.person=this.value.trim();updateNext1()">
   <button class="next-btn" id="next1" onclick="step=2;renderStep()" ${F.person?'':'disabled'}>המשך</button>
   ${multiBtn}
   ${clearBtn}
@@ -1219,7 +1223,7 @@ function stepItems(){
   try {
   const allCats=[...new Set(ITEMS.map(i=>i.cat))].filter(c=>!PARTNER_CATS.has(c)&&!NO_DISPATCH_CATS.has(c));
   const cats=[...CAT_ORDER.filter(c=>allCats.includes(c)), ...allCats.filter(c=>!CAT_ORDER.includes(c))];
-  let html=`<div class="sheet-title">פריטים → ${F.person}</div>
+  let html=`<div class="sheet-title">פריטים → ${escapeHtml(F.person)}</div>
   <div style="font-size:11px;color:var(--accent);margin-bottom:12px;background:var(--accent-dim);padding:7px 10px;border-radius:8px;font-weight:600">סימון רחפן = שלט יוצא אוטומטית כסט</div>
   <div style="height:60px"></div>`;
 
@@ -1259,7 +1263,7 @@ function stepItems(){
       return;
     }
 
-    html+=`<div class="cat-check-hdr"><span>${cat}</span><button onclick="toggleCat(this.closest('.cat-check-hdr').dataset.cat)">כולם</button></div>`.replace('<div class="cat-check-hdr">', `<div class="cat-check-hdr" data-cat="${cat.replace(/"/g,'&quot;')}">`);
+    html+=`<div class="cat-check-hdr"><span>${escapeHtml(cat)}</span><button onclick="toggleCat(this.closest('.cat-check-hdr').dataset.cat)">כולם</button></div>`.replace('<div class="cat-check-hdr">', `<div class="cat-check-hdr" data-cat="${escapeHtml(cat)}">`);
     html+=`<div class="check-grid">`;
     inCat.forEach(item=>{
       const on=F.items.includes(item.id);
@@ -1273,7 +1277,7 @@ function stepItems(){
       const safeId=escId(item.id);
       html+=`<div class="check-item${on?' on':''}" onclick="toggleItem('${safeId}')">
         <div class="check-box${on?' on':''}" id="cb-${safeId}"></div>
-        <div style="flex:1"><div class="check-lbl">${colorDot(item)}${item.id}</div>${partnerLabel}</div>
+        <div style="flex:1"><div class="check-lbl">${colorDot(item)}${escapeHtml(item.id)}</div>${partnerLabel}</div>
       </div>`;
     });
     html+=`</div>`;
@@ -1311,14 +1315,14 @@ function stepReturnItems(){
   allOut.forEach(item=>{const w=(db.items[item.id]||{}).where||'לא ידוע';if(!byP[w])byP[w]=[];byP[w].push(item);});
   let html=`<div class="sheet-title">מה חוזר?</div><div style="height:60px"></div>`;
   Object.keys(byP).forEach(p=>{
-    html+=`<div class="cat-check-hdr"><span>📌 ${p}</span><button onclick="togglePersonReturn('${escId(p)}')">כולם</button></div>`;
+    html+=`<div class="cat-check-hdr"><span>📌 ${escapeHtml(p)}</span><button onclick="togglePersonReturn('${escId(p)}')">כולם</button></div>`;
     html+=`<div class="check-grid">`;
     byP[p].forEach(item=>{
       const on=F.items.includes(item.id);
       const safeId=escId(item.id);
       html+=`<div class="check-item${on?' on':''}" onclick="toggleItem('${safeId}')">
         <div class="check-box${on?' on':''}" id="cb-${safeId}"></div>
-        <div style="flex:1"><div class="check-lbl">${colorDotById(item.id)}${item.displayId}</div><div style="font-size:10px;color:var(--text3)">${item.cat}</div></div>
+        <div style="flex:1"><div class="check-lbl">${colorDotById(item.id)}${escapeHtml(item.displayId)}</div><div style="font-size:10px;color:var(--text3)">${escapeHtml(item.cat)}</div></div>
       </div>`;
     });
     html+=`</div>`;
@@ -1336,7 +1340,7 @@ function stepTransferDest(){
   });
   return`<div class="sheet-title">לאן מועברים?</div>
   <div class="person-grid">${btns}</div>
-  <input class="person-other" id="dest-inp" placeholder="מיקום אחר..." value="${F.transferDest&&!PEOPLE.includes(F.transferDest)?F.transferDest:''}" oninput="selTransferDest(this.value.trim())">
+  <input class="person-other" id="dest-inp" placeholder="מיקום אחר..." value="${escapeHtml(F.transferDest&&!PEOPLE.includes(F.transferDest)?F.transferDest:'')}" oninput="selTransferDest(this.value.trim())">
   <button class="next-btn" id="next-dest" onclick="step=4;renderStep()" ${F.transferDest?'':'disabled'}>המשך</button>
   <button class="back-btn" onclick="step=2;renderStep()">חזרה</button>`;
 }
@@ -1423,8 +1427,8 @@ function openItemMenu(id){
   const isWorn=s.worn===true;
   const el=document.getElementById('sheet-content');
   el.innerHTML=`
-    <div class="sheet-title">${id}</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:16px">${isWorn?'מסומן כבלאי — '+( s.wornReason||'ללא סיבה'):'בבסיס'}</div>
+    <div class="sheet-title">${escapeHtml(id)}</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:16px">${isWorn?'מסומן כבלאי — '+escapeHtml(s.wornReason||'ללא סיבה'):'בבסיס'}</div>
     ${!isWorn?`<button class="next-btn" style="margin-bottom:8px" onclick="startFlow('${escId(id)}','dispatch')">↑ העמסה לשטח</button>`:''}
     ${!isWorn?`
     <span class="slabel">סיבת בלאי</span>
@@ -1475,8 +1479,8 @@ function stepAssignDest(){
     html+=`<div class="check-item${checked?' on':''}" onclick="toggleDestSel('${safeId}')" style="${assigned&&!checked?'opacity:0.6':''}">
       <div class="check-box${checked?' on':''}"></div>
       <div style="flex:1">
-        <div class="check-lbl">${item?colorDot(item):''}${id}</div>
-        ${assigned?`<div style="font-size:10px;color:var(--accent);font-weight:700">→ ${assigned}</div>`:''}
+        <div class="check-lbl">${item?colorDot(item):''}${escapeHtml(id)}</div>
+        ${assigned?`<div style="font-size:10px;color:var(--accent);font-weight:700">→ ${escapeHtml(assigned)}</div>`:''}
       </div>
     </div>`;
   });
@@ -1485,7 +1489,7 @@ function stepAssignDest(){
   if(F.destSelection.length){
     html+=`<div style="font-size:13px;color:var(--text1);font-weight:600;margin-bottom:8px">${F.destSelection.length} פריטים מסומנים — לאן?</div>
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
-      ${locs.map(l=>`<button type="button" onclick="bulkAssignDest('${escId(l)}')" style="padding:8px 12px;border-radius:16px;border:1px solid var(--accent);background:transparent;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer">${l}</button>`).join('')}
+      ${locs.map(l=>`<button type="button" onclick="bulkAssignDest('${escId(l)}')" style="padding:8px 12px;border-radius:16px;border:1px solid var(--accent);background:transparent;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer">${escapeHtml(l)}</button>`).join('')}
     </div>
     <div style="display:flex;gap:6px;margin-bottom:12px">
       <input placeholder="או הקלד יעד חדש..." id="bulk-dest-inp" style="flex:1;padding:8px;border:1px solid var(--border2);border-radius:6px;font-size:13px;box-sizing:border-box" oninput="F.bulkDestVal=this.value.trim()" onkeydown="if(event.key==='Enter'){event.preventDefault();bulkAssignDest((F.bulkDestVal||this.value.trim()));}">
@@ -1534,7 +1538,7 @@ function confirmAssignDest(){
 function stepReview(){
   const t=now();
   const previewMsg=buildWhatsappMsg(t,'','');
-  const msgHtml=previewMsg.replace(/\*([^*]+)\*/g,'<b>$1</b>');
+  const msgHtml=escapeHtml(previewMsg).replace(/\*([^*]+)\*/g,'<b>$1</b>');
   const backStep=F.action==='dispatch'?(F.multiDest?3:2):F.action==='transfer'?3:1;
   return`<div class="sheet-title">בדוק לפני שליחה</div>
   <div style="background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:12px;font-size:13px;line-height:1.8;white-space:pre-wrap;margin-bottom:14px;direction:rtl">${msgHtml}</div>
@@ -1769,7 +1773,7 @@ function showFaultReport(){
   });
   const msg = parts.join('\n').replace(/\n{3,}/g,'\n\n').trim();
   const encoded = encodeURIComponent(msg);
-  const msgHtml = msg.replace(/\n/g,'<br>');
+  const msgHtml = escapeHtml(msg).replace(/\n/g,'<br>');
   el.innerHTML = `
     <div class="sheet-title">🛠️ דו"ח תקלות (${total})</div>
     <div style="background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:12px;font-size:13px;line-height:1.8;white-space:pre-wrap;margin-bottom:16px;direction:rtl;max-height:50vh;overflow-y:auto">${msgHtml}</div>
@@ -1784,7 +1788,7 @@ function showShareSheet(t, faultDesc, notes){
   const msg = buildWhatsappMsg(t, faultDesc, notes);
   const el = document.getElementById('sheet-content');
   const encoded = encodeURIComponent(msg);
-  const msgHtml = msg.replace(/\*([^*]+)\*/g,'<b>$1</b>');
+  const msgHtml = escapeHtml(msg).replace(/\*([^*]+)\*/g,'<b>$1</b>');
   el.innerHTML = `
     <div class="sheet-title">✅ נשמר בהצלחה</div>
     <div style="background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:12px;font-size:13px;line-height:1.8;white-space:pre-wrap;margin-bottom:16px;direction:rtl">${msgHtml}</div>
@@ -1828,7 +1832,7 @@ function renderInventory(){
     const items=ITEMS.filter(i=>i.cat===cat&&(!q||i.id.toLowerCase().includes(q)));
     if(!items.length)return;
     const sec=document.createElement('div');
-    sec.innerHTML=`<div class="cat-hdr"><span>${cat}</span><span style="color:var(--text3)">${items.length}</span></div>`;
+    sec.innerHTML=`<div class="cat-hdr"><span>${escapeHtml(cat)}</span><span style="color:var(--text3)">${items.length}</span></div>`;
     items.forEach(item=>{
       const s=db.items[item.id];
       const isWorn = s.worn===true;
@@ -1837,7 +1841,7 @@ function renderInventory(){
       const row=document.createElement('div');
       row.className=`item-row ${isWorn?'fault':s.status}`;
       const contentsStr=(PELICAN_ITEMS.includes(item.id)&&s.contents&&s.contents.ids&&s.contents.ids.length)?` <span style="font-size:10px;color:var(--text3);font-weight:500">(${s.contents.ids.length} רחפנים בפנים)</span>`:'';
-      row.innerHTML=`<div class="item-id">${colorDot(item)}${item.id}${v2Tag(item)}${contentsStr}</div><div class="item-where">${notInUseTag(item)}${s.where||''}</div><div class="item-badge ${bc}">${sl}</div>`;
+      row.innerHTML=`<div class="item-id">${colorDot(item)}${escapeHtml(item.id)}${v2Tag(item)}${contentsStr}</div><div class="item-where">${notInUseTag(item)}${escapeHtml(s.where||'')}</div><div class="item-badge ${bc}">${sl}</div>`;
       row.onclick=()=>{
         if(isWorn||s.status==='base'){
           // הצג תפריט קצר
@@ -1879,7 +1883,7 @@ function renderOut(){
   if(!people.length){el.innerHTML='<div class="empty">כל הציוד בבסיס ✓</div>';return;}
   people.forEach(p=>{
     const sec=document.createElement('div');
-    sec.innerHTML=`<div class="cat-hdr"><span>📌 ${p}</span><span style="color:var(--yellow)">${byP[p].length} פריטים</span></div>`;
+    sec.innerHTML=`<div class="cat-hdr"><span>📌 ${escapeHtml(p)}</span><span style="color:var(--yellow)">${byP[p].length} פריטים</span></div>`;
     byP[p].forEach(({id,label,s})=>{
       const bc=s.status==='fault'?'b-fault':'b-out';
       const sl=s.status==='fault'?'תקלה':'בשטח';
@@ -1888,7 +1892,7 @@ function renderOut(){
       row.style.flexWrap='wrap';
       row.style.gap='6px';
       row.innerHTML=`
-        <div class="item-id" style="flex:1">${colorDotById(id)}${label}</div>
+        <div class="item-id" style="flex:1">${colorDotById(id)}${escapeHtml(label)}</div>
         <div class="item-badge ${bc}">${sl}</div>
         <div style="width:100%;display:flex;gap:6px;margin-top:4px">
           <button onclick="quickTransfer('${escId(id)}')" style="flex:1;padding:7px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent);border-radius:8px;font:600 12px/1 Heebo,sans-serif;cursor:pointer">↔ העבר</button>
@@ -1927,7 +1931,7 @@ function quickTransfer(id){
   const ids=getSetIds(id);
   const btns=PEOPLE.map(p=>`<button class="person-btn" onclick="doQuickTransfer(${escJson(ids)},'${p}')">${p}</button>`).join('');
   el.innerHTML=`
-    <div class="sheet-title">העבר ${id} לאן?</div>
+    <div class="sheet-title">העבר ${escapeHtml(id)} לאן?</div>
     ${ids.length>1?`<div style="font-size:12px;color:var(--accent);background:var(--accent-dim);padding:7px 10px;border-radius:8px;margin-bottom:12px">יועבר כסט עם ${ids[1]}</div>`:''}
     <div class="person-grid">${btns}</div>
     <input class="person-other" id="qt-other" placeholder="מיקום אחר..." oninput="document.getElementById('qt-confirm').disabled=!this.value.trim()">
@@ -1957,12 +1961,12 @@ function renderLog(){
   el.innerHTML='';
   log.slice(0,80).forEach(e=>{
     const ac=e.action==='out'?'lb-out':e.action==='transfer'?'lb-out':'lb-in';
-    const al=e.action==='out'?'ירד':e.action==='transfer'?'עבר ל-'+(e.person||''):'חזר';
+    const al=e.action==='out'?'ירד':e.action==='transfer'?'עבר ל-'+escapeHtml(e.person||''):'חזר';
     const fb=e.cond==='fault'?`<span class="log-badge lb-fault">תקלה</span>`:'';
     const row=document.createElement('div');
     row.className='log-row';
-    row.innerHTML=`<div class="log-top"><div class="log-id"><span class="log-badge ${ac}">${al}</span>${fb} ${e.id}</div><div class="log-ts">${e.ts}</div></div>
-    <div class="log-sub">${e.action!=='transfer'&&e.person?'📍 '+e.person:''}${e.faultDesc?'<br>⚠ '+e.faultDesc:''}${e.notes?'<br>📝 '+e.notes:''}</div>`;
+    row.innerHTML=`<div class="log-top"><div class="log-id"><span class="log-badge ${ac}">${al}</span>${fb} ${escapeHtml(e.id)}</div><div class="log-ts">${escapeHtml(e.ts)}</div></div>
+    <div class="log-sub">${e.action!=='transfer'&&e.person?'📍 '+escapeHtml(e.person):''}${e.faultDesc?'<br>⚠ '+escapeHtml(e.faultDesc):''}${e.notes?'<br>📝 '+escapeHtml(e.notes):''}</div>`;
     el.appendChild(row);
   });
 }
@@ -2224,7 +2228,7 @@ function renderManage(){
       <option value="">-- בחר קטגוריה --</option>`;
   
   const cats=[...new Set(ITEMS.map(i=>i.cat))].sort();
-  cats.forEach(c=>html+=`<option value="${c}">${c}</option>`);
+  cats.forEach(c=>html+=`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`);
   html+=`<option value="__new__">+ קטגוריה חדשה</option></select>
     <input id="item-new-cat" placeholder="שם קטגוריה חדשה" style="width:100%;padding:8px;margin-bottom:10px;border:1px solid var(--border2);border-radius:6px;display:none">
     <label style="display:flex;align-items:center;gap:6px;margin-bottom:12px;font-size:13px;color:var(--text2)">
@@ -2271,8 +2275,8 @@ function renderCustomItemsList(){
   custom.forEach((item,idx)=>{
     html+=`<div style="padding:8px;background:var(--accent-dim);border-radius:6px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
       <div>
-        <div style="font-weight:600;font-size:13px">${item.name}</div>
-        <div style="font-size:11px;color:var(--text3)">${item.cat} • ${item.qty}x</div>
+        <div style="font-weight:600;font-size:13px">${escapeHtml(item.name)}</div>
+        <div style="font-size:11px;color:var(--text3)">${escapeHtml(item.cat)} • ${item.qty}x</div>
       </div>
       <button onclick="removeCustomItem(${idx})" style="background:var(--danger,#e74c3c);color:white;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer">הסר</button>
     </div>`;
@@ -2395,14 +2399,14 @@ function renderDay(){
 
   // כותרת
   html+=`<div class="day-section">
-    <div style="font-size:16px;font-weight:800;margin-bottom:4px">${day.date||''}</div>
-    ${day.arrivalTime?`<div style="font-size:13px;color:var(--text2)">הגעה: ${day.arrivalTime}</div>`:''}
+    <div style="font-size:16px;font-weight:800;margin-bottom:4px">${escapeHtml(day.date||'')}</div>
+    ${day.arrivalTime?`<div style="font-size:13px;color:var(--text2)">הגעה: ${escapeHtml(day.arrivalTime)}</div>`:''}
   </div>`;
 
   // הערות מיוחדות
   if(day.notes){
     html+=`<div class="day-section" style="border-right:3px solid var(--yellow);background:var(--yellow-dim)">
-      <div style="font-size:14px;font-weight:700">⚡ ${day.notes}</div>
+      <div style="font-size:14px;font-weight:700">⚡ ${escapeHtml(day.notes)}</div>
     </div>`;
   }
 
@@ -2440,7 +2444,7 @@ function renderDay(){
     day.tasks.forEach(function(task,i){
       html+=`<div class="task-item" onclick="toggleTask(${i})">
         <div class="task-check${task.done?' done':''}"></div>
-        <div class="task-text${task.done?' done':''}">${task.text}</div>
+        <div class="task-text${task.done?' done':''}">${escapeHtml(task.text)}</div>
       </div>`;
     });
     html+='</div>';
@@ -2449,14 +2453,14 @@ function renderDay(){
   // כיתות
   if(day.classes){
     html+=`<div class="day-section"><div class="day-section-title">כיתות</div>
-      <div style="font-size:13px;line-height:1.8;color:var(--text)">${day.classes.split('\n').filter(l=>l.trim()).map(l=>'• '+l).join('<br>')}</div>
+      <div style="font-size:13px;line-height:1.8;color:var(--text)">${day.classes.split('\n').filter(l=>l.trim()).map(l=>'• '+escapeHtml(l)).join('<br>')}</div>
     </div>`;
   }
 
   // כוח אדם
   if(day.staff){
     html+=`<div class="day-section"><div class="day-section-title">כוח אדם</div>
-      <div style="font-size:13px;line-height:1.8;color:var(--text)">${day.staff.split('\n').filter(l=>l.trim()).map(l=>'• '+l).join('<br>')}</div>
+      <div style="font-size:13px;line-height:1.8;color:var(--text)">${day.staff.split('\n').filter(l=>l.trim()).map(l=>'• '+escapeHtml(l)).join('<br>')}</div>
     </div>`;
   }
 
@@ -2492,10 +2496,10 @@ function openDayEdit(){
     <div class="sheet-title">הגדרת יום</div>
 
     <span class="slabel">תאריך ושם היום</span>
-    <input class="person-other" id="day-date" placeholder="למשל: יום חמישי 15.5.26" value="${day.date||''}">
+    <input class="person-other" id="day-date" placeholder="למשל: יום חמישי 15.5.26" value="${escapeHtml(day.date||'')}">
 
     <span class="slabel">שעת הגעה</span>
-    <input class="person-other" id="day-arrival" placeholder="למשל: 08:00" value="${day.arrivalTime||''}">
+    <input class="person-other" id="day-arrival" placeholder="למשל: 08:00" value="${escapeHtml(day.arrivalTime||'')}">
 
     <span class="slabel">עמדות פעילות</span>
     <div class="person-grid" id="sta-grid">${staBtns}</div>
@@ -2504,16 +2508,16 @@ function openDayEdit(){
     <div style="margin-bottom:14px">${qtyFields}</div>
 
     <span class="slabel">משימות בוקר (שורה אחת = משימה אחת)</span>
-    <textarea class="notes" id="day-tasks" style="height:120px" placeholder="זיכוי מגורים&#10;השלמת פערים בקפה&#10;פתיחת חד&quot;ן">${(day.tasks||[]).map(t=>t.text).join('\n')}</textarea>
+    <textarea class="notes" id="day-tasks" style="height:120px" placeholder="זיכוי מגורים&#10;השלמת פערים בקפה&#10;פתיחת חד&quot;ן">${escapeHtml((day.tasks||[]).map(t=>t.text).join('\n'))}</textarea>
 
     <span class="slabel">כוח אדם</span>
-    <textarea class="notes" id="day-staff" style="height:80px" placeholder="אליקים - מנשה + בר + שגיא&#10;לכיש - אוריאל + שרון">${day.staff||''}</textarea>
+    <textarea class="notes" id="day-staff" style="height:80px" placeholder="אליקים - מנשה + בר + שגיא&#10;לכיש - אוריאל + שרון">${escapeHtml(day.staff||'')}</textarea>
 
     <span class="slabel">כיתות</span>
-    <textarea class="notes" id="day-classes" style="height:80px" placeholder="חד&quot;ן בל&quot;ר - עין הבשור&#10;אודיטוריום - מטיס מבצעי">${day.classes||''}</textarea>
+    <textarea class="notes" id="day-classes" style="height:80px" placeholder="חד&quot;ן בל&quot;ר - עין הבשור&#10;אודיטוריום - מטיס מבצעי">${escapeHtml(day.classes||'')}</textarea>
 
     <span class="slabel">הערות מיוחדות</span>
-    <input class="person-other" id="day-notes" placeholder='למשל: שקשוקה של דורית ב-12:00' value="${day.notes||''}">
+    <input class="person-other" id="day-notes" placeholder='למשל: שקשוקה של דורית ב-12:00' value="${escapeHtml(day.notes||'')}">
 
     <button class="next-btn" onclick="saveDayEdit()">שמור</button>
     <button class="back-btn" onclick="closeSheet()">ביטול</button>
