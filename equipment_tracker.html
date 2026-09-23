@@ -13,7 +13,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="מעקב ציוד">
-<link rel="icon" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap');
 :root {
@@ -170,7 +171,7 @@ textarea.notes:focus{border-color:var(--accent)}
   <div class="hdr-title">מעקב ציוד</div>
   <div id="sync-status" style="font-size:11px;font-weight:600;color:var(--text3)">⏳ מתחבר...</div>
   <div class="pill pill-out" id="hdr-out">בשטח: 0</div>
-  <div class="pill pill-fault" id="hdr-fault" onclick="showFaultReport()" style="cursor:pointer">תקלות: 0</div>
+  <div class="pill pill-fault" id="hdr-fault" onclick="showFaultReport()" style="cursor:pointer">🛠️ תקלות: 0</div>
 </div>
 <div class="tabs">
   <button class="tab on" onclick="showPage('inventory',this)">📦 מלאי</button>
@@ -1818,7 +1819,7 @@ function renderHeader(){
     if(s.status==='fault') freeFault++;
   });
   document.getElementById('hdr-out').textContent='בשטח: '+(o+freeOut);
-  document.getElementById('hdr-fault').textContent='תקלות: '+(f+freeFault);
+  document.getElementById('hdr-fault').textContent='🛠️ תקלות: '+(f+freeFault);
   document.getElementById('sn-base').textContent=ITEMS.length-o-f;
   document.getElementById('sn-out').textContent=o;
   document.getElementById('sn-fault').textContent=f;
