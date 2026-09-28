@@ -388,6 +388,7 @@ const ITEMS=[
   // פליקנים
   {id:'פליקן גבעת הלוס',cat:'פליקנים'},
   {id:'פליקן מטיס 3',cat:'פליקנים'},
+  {id:'פליקן C2',cat:'פליקנים'},{id:'פליקן מפקד',cat:'פליקנים'},{id:'פליקן B1',cat:'פליקנים'},{id:'פליקן B2',cat:'פליקנים'},
   // התקן אלקטרו מכאני (משויך לרחפן, לא יוצא אוטומטית איתו)
   {id:'2146 (רחפן 2821)',cat:'התקן אלקטרו מכאני'},
   
@@ -690,7 +691,7 @@ const PEOPLE=['מטיס 1','FPV','מעבדה','להחלפה','אמיר','מאי�
 const PARTNER_CATS=new Set(['שלטי משימה','שלטי אווטה','שלטי אלפא','שלטי FLYCART','שלטי אטטי','שלט EVO MAX']);
 // קטגוריות "לא מחויל" — מוצגות במלאי אבל לא ניתנות להעמסה/החתמה כלל
 const NO_DISPATCH_CATS=new Set(['רחפני איבו (לא מחויל)','אווטה לא מחויל','ערכות לא מחויל','עמוס (לא מחויל)','אבזור לא מחויל','בדמינטון (לא מחויל)','חימוש בומרנג (לא מחויל)','ציוד מיוחד (לא מחויל)','טלפונים','מחשבים','ציוד רכב','ציוד ניווט','ציוד תקשורת','רכבים','Matrice לא מחויל','רחפני Mavic (לא מחויל)','FLYCART לא מחויל','ציוד נוסף לא מחויל']);
-const PELICAN_ITEMS = ['פליקן גבעת הלוס','פליקן מטיס 3'];
+const PELICAN_ITEMS = ['פליקן גבעת הלוס','פליקן מטיס 3','פליקן C2','פליקן מפקד','פליקן B1','פליקן B2'];
 const KEY='uav3_v1';
 let db={items:{},log:[],customLocations:[]};
 
@@ -871,7 +872,14 @@ function removeFromSelection(id){
 }
 
 // ── תוכן פליקן (רחפנים בפנים) ──
-const PELICAN_DRONE_CATS=['רחפן עטלף 5','רחפן עטלף 7"','רחפן עטלף 10"'];
+const PELICAN_DRONE_CATS=['רחפן עטלף 5','רחפן עטלף 7"','רחפן עטלף 10"']; // ברירת מחדל לפליקן שאין לו הגבלה ספציפית
+const PELICAN_DRONE_CATS_OVERRIDE = {
+  'פליקן גבעת הלוס': ['רחפן עטלף 10"'],
+  'פליקן מטיס 3': ['רחפן עטלף 5','רחפן עטלף 7"'],
+};
+function getPelicanDroneCats(pelicanId){
+  return PELICAN_DRONE_CATS_OVERRIDE[pelicanId] || PELICAN_DRONE_CATS;
+}
 
 function openPelicanContentPicker(pelicanId){
   if(!F.pelicanContents) F.pelicanContents={};
@@ -881,7 +889,7 @@ function openPelicanContentPicker(pelicanId){
   if(!el) return;
   let html=`<div class="sheet-title">מה בפנים ${pelicanId}?</div>
   <div style="font-size:11px;color:var(--accent);margin-bottom:12px;background:var(--accent-dim);padding:7px 10px;border-radius:8px;font-weight:600">בחר את הרחפנים הספציפיים שנמצאים בפליקן</div>`;
-  PELICAN_DRONE_CATS.forEach(cat=>{
+  getPelicanDroneCats(pelicanId).forEach(cat=>{
     const avail=ITEMS.filter(i=>i.cat===cat&&db.items[i.id]&&(db.items[i.id].status==='base'||chosen.includes(i.id))&&!db.items[i.id].worn);
     if(!avail.length) return;
     html+=`<div class="cat-check-hdr"><span>${cat}</span></div><div class="check-grid">`;
