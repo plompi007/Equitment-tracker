@@ -1109,7 +1109,7 @@ function stepTransferFromItems(){
     const safeId=escId(item.id);
     html+=`<div class="check-item${on?' on':''}" onclick="toggleItem('${safeId}')">
       <div class="check-box${on?' on':''}" id="cb-${safeId}"></div>
-      <div style="flex:1"><div class="check-lbl">${escapeHtml(item.displayId)}</div></div>
+      <div style="flex:1"><div class="check-lbl">${colorDotById(item.id)}${escapeHtml(item.displayId)}</div></div>
     </div>`;
   });
   html+=`</div><div style="height:70px"></div>`;
