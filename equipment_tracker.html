@@ -1343,6 +1343,16 @@ function catCompare(a,b){
   if(ma&&mb&&ma[1]===mb[1]) return parseInt(ma[2],10)-parseInt(mb[2],10);
   return a.localeCompare(b,'he');
 }
+// קטגוריית תצוגה: רחפן בקטגוריה גנרית ("רחפני אווטה") ששייך לערכה מסוימת (לפי השלט שלו) יוצג תחת אותה ערכה, לא מופרד ממנה
+function displayCatFor(item){
+  if(/ערכה \d+$/.test(item.cat)) return item.cat;
+  const partner=getPartner(item.id);
+  if(partner){
+    const p=ITEMS.find(i=>i.id===partner);
+    if(p&&/ערכה \d+$/.test(p.cat)) return p.cat;
+  }
+  return item.cat;
+}
 function stepReturnItems(){
   const outItems=ITEMS.filter(i=>db.items[i.id]&&(db.items[i.id].status==='out'||db.items[i.id].status==='fault'));
   // הסתר שלטים שהם שותפי סט — יחזרו אוטומטית יחד עם הרחפן/המשקף שלהם
@@ -1364,7 +1374,7 @@ function stepReturnItems(){
   Object.keys(byP).forEach(p=>{
     html+=`<div class="cat-check-hdr"><span>📌 ${escapeHtml(p)}</span><button onclick="togglePersonReturn('${escId(p)}')">כולם</button></div>`;
     const byCat={};
-    byP[p].forEach(item=>{ if(!byCat[item.cat]) byCat[item.cat]=[]; byCat[item.cat].push(item); });
+    byP[p].forEach(item=>{ const c=displayCatFor(item); if(!byCat[c]) byCat[c]=[]; byCat[c].push(item); });
     Object.keys(byCat).sort(catCompare).forEach(cat=>{
       html+=`<div style="font-size:11px;font-weight:700;color:var(--accent);padding:8px 2px 4px">${escapeHtml(cat)}</div><div class="check-grid">`;
       byCat[cat].forEach(item=>{
