@@ -1396,14 +1396,15 @@ function stepReturnItems(){
     const byCat={};
     byP[p].forEach(item=>{ const c=displayCatFor(item); if(!byCat[c]) byCat[c]=[]; byCat[c].push(item); });
     Object.keys(byCat).sort(catCompare).forEach(cat=>{
-      html+=`<div style="font-size:11px;font-weight:700;color:var(--accent);padding:8px 2px 4px">${escapeHtml(cat)}</div><div class="check-grid">`;
+      // שלט מוסתר מוזכר פעם אחת לכל ערכה (ליד כותרת הקטגוריה), לא על כל פריט בנפרד — יש רק שלט אחד לערכה
+      const ctrlNote=byCat[cat].some(item=>returnPartnerSuffix(item.id)) ? ' <span style="color:var(--text3);font-weight:500">(+ שלט)</span>' : '';
+      html+=`<div style="font-size:11px;font-weight:700;color:var(--accent);padding:8px 2px 4px">${escapeHtml(cat)}${ctrlNote}</div><div class="check-grid">`;
       byCat[cat].forEach(item=>{
         const on=F.items.includes(item.id);
         const safeId=escId(item.id);
-        const suffix=returnPartnerSuffix(item.id);
         html+=`<div class="check-item${on?' on':''}" onclick="toggleItem('${safeId}')">
           <div class="check-box${on?' on':''}" id="cb-${safeId}"></div>
-          <div style="flex:1"><div class="check-lbl">${colorDotById(item.id)}${escapeHtml(item.displayId)}${suffix}</div></div>
+          <div style="flex:1"><div class="check-lbl">${colorDotById(item.id)}${escapeHtml(item.displayId)}</div></div>
         </div>`;
       });
       html+=`</div>`;
