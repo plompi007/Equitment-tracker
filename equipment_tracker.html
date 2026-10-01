@@ -838,7 +838,10 @@ const SET_PAIRS = {
 const SET_PAIRS_REV = Object.fromEntries(Object.entries(SET_PAIRS).map(([k,v])=>[v,k]));
 
 function getPartner(id){
-  return SET_PAIRS[id] || SET_PAIRS_REV[id] || null;
+  if(SET_PAIRS[id] || SET_PAIRS_REV[id]) return SET_PAIRS[id] || SET_PAIRS_REV[id];
+  // משקף אווטה ↔ שלט אווטה מאותה ערכה — מזוהים לפי אותו מספר, אין צורך בטבלת SET_PAIRS ייעודית
+  if(id.indexOf('משק-')===0) return 'שלט-אווטה-'+id.slice(4);
+  return null;
 }
 
 function addToSelection(id){
@@ -1316,16 +1319,40 @@ function stepItems(){
   }
 }
 
+// האם שלט "מכוסה" ע"י שותף (רחפן קבוע, או משקף באותה ערכה) שגם הוא בשטח/בתקלה — יחזור אוטומטית בלעדיו
+function controllerCoveredByPartner(ctrlId){
+  const drone=SET_PAIRS_REV[ctrlId];
+  if(drone&&db.items[drone]&&(db.items[drone].status==='out'||db.items[drone].status==='fault')) return true;
+  const m=ctrlId.match(/^שלט-אווטה-(.+)$/);
+  if(m){
+    const g='משק-'+m[1];
+    if(db.items[g]&&(db.items[g].status==='out'||db.items[g].status==='fault')) return true;
+  }
+  return false;
+}
+// תוספת "+ שלט" לפריט שהשלט שלו מוסתר ברשימה ויחזור יחד איתו אוטומטית
+function returnPartnerSuffix(id){
+  const ctrl = SET_PAIRS[id] || (id.indexOf('משק-')===0 ? 'שלט-אווטה-'+id.slice(4) : null);
+  if(!ctrl) return '';
+  const s=db.items[ctrl];
+  return (s&&(s.status==='out'||s.status==='fault')) ? ' + שלט' : '';
+}
+// מיון קטגוריות כך ש"ערכה 2" יופיע לפני "ערכה 10"
+function catCompare(a,b){
+  const ma=a.match(/^(.*ערכה )(\d+)$/), mb=b.match(/^(.*ערכה )(\d+)$/);
+  if(ma&&mb&&ma[1]===mb[1]) return parseInt(ma[2],10)-parseInt(mb[2],10);
+  return a.localeCompare(b,'he');
+}
 function stepReturnItems(){
   const outItems=ITEMS.filter(i=>db.items[i.id]&&(db.items[i.id].status==='out'||db.items[i.id].status==='fault'));
-  // הסתר שלטים שהם שותפי סט — יחזרו אוטומטית
+  // הסתר שלטים שהם שותפי סט — יחזרו אוטומטית יחד עם הרחפן/המשקף שלהם
   const mainItems=outItems.filter(i=>{
-    const partner=getPartner(i.id);
-    // אם זה שלט שיש לו רחפן בשטח — הסתר אותו
-    if(partner&&db.items[partner]&&(db.items[partner].status==='out'||db.items[partner].status==='fault')){
-      return !PARTNER_CATS.has(i.cat);
+    if(i.id.indexOf('שלט-')!==0) return true;
+    if(PARTNER_CATS.has(i.cat)){
+      const partner=getPartner(i.id);
+      if(partner&&db.items[partner]&&(db.items[partner].status==='out'||db.items[partner].status==='fault')) return false;
     }
-    return true;
+    return !controllerCoveredByPartner(i.id);
   });
   // הוסף פריטים חופשיים
   const freeItems=Object.keys(db.items||{}).filter(id=>id.indexOf('חופשי:')===0&&(db.items[id].status==='out'||db.items[id].status==='fault')).map(id=>({id,cat:'חופשי',displayId:db.items[id].displayId||id.replace('חופשי:','')}));
@@ -1336,16 +1363,21 @@ function stepReturnItems(){
   let html=`<div class="sheet-title">מה חוזר?</div><div style="height:60px"></div>`;
   Object.keys(byP).forEach(p=>{
     html+=`<div class="cat-check-hdr"><span>📌 ${escapeHtml(p)}</span><button onclick="togglePersonReturn('${escId(p)}')">כולם</button></div>`;
-    html+=`<div class="check-grid">`;
-    byP[p].forEach(item=>{
-      const on=F.items.includes(item.id);
-      const safeId=escId(item.id);
-      html+=`<div class="check-item${on?' on':''}" onclick="toggleItem('${safeId}')">
-        <div class="check-box${on?' on':''}" id="cb-${safeId}"></div>
-        <div style="flex:1"><div class="check-lbl">${colorDotById(item.id)}${escapeHtml(item.displayId)}</div><div style="font-size:10px;color:var(--text3)">${escapeHtml(item.cat)}</div></div>
-      </div>`;
+    const byCat={};
+    byP[p].forEach(item=>{ if(!byCat[item.cat]) byCat[item.cat]=[]; byCat[item.cat].push(item); });
+    Object.keys(byCat).sort(catCompare).forEach(cat=>{
+      html+=`<div style="font-size:11px;font-weight:700;color:var(--accent);padding:8px 2px 4px">${escapeHtml(cat)}</div><div class="check-grid">`;
+      byCat[cat].forEach(item=>{
+        const on=F.items.includes(item.id);
+        const safeId=escId(item.id);
+        const suffix=returnPartnerSuffix(item.id);
+        html+=`<div class="check-item${on?' on':''}" onclick="toggleItem('${safeId}')">
+          <div class="check-box${on?' on':''}" id="cb-${safeId}"></div>
+          <div style="flex:1"><div class="check-lbl">${colorDotById(item.id)}${escapeHtml(item.displayId)}${suffix}</div></div>
+        </div>`;
+      });
+      html+=`</div>`;
     });
-    html+=`</div>`;
   });
   html+=`<div style="height:70px"></div>`;
   return html;
