@@ -843,6 +843,21 @@ function getPartner(id){
   if(id.indexOf('משק-')===0) return 'שלט-אווטה-'+id.slice(4);
   return null;
 }
+// כל "משפחת הערכה" של פריט (שלט+משקף+רחפן) חוץ מעצמו — רחפן אווטה לא יוצא/חוזר בלי השלט והמשקף שלו
+function kitFamily(id){
+  let ctrl=null, drone=null, goggles=null;
+  if(SET_PAIRS[id]){ drone=id; ctrl=SET_PAIRS[id]; }
+  else if(SET_PAIRS_REV[id]){ ctrl=id; drone=SET_PAIRS_REV[id]; }
+  else if(id.indexOf('משק-')===0){ ctrl='שלט-אווטה-'+id.slice(4); goggles=id; }
+  if(ctrl){
+    if(!drone) drone=SET_PAIRS_REV[ctrl]||null;
+    if(!goggles){
+      const m=ctrl.match(/^שלט-אווטה-(.+)$/);
+      if(m) goggles='משק-'+m[1];
+    }
+  }
+  return [ctrl,drone,goggles].filter(x=>x&&x!==id);
+}
 
 function addToSelection(id){
   if(!F.items.includes(id)) F.items.push(id);
@@ -864,16 +879,15 @@ function addToSelection(id){
       }
     }
   }
-  const partner=getPartner(id);
-  if(partner && db.items[partner] && db.items[partner].status==='base' && !F.items.includes(partner))
-    F.items.push(partner);
+  kitFamily(id).forEach(p=>{
+    if(db.items[p] && db.items[p].status==='base' && !F.items.includes(p)) F.items.push(p);
+  });
 }
 function removeFromSelection(id){
   F.items=F.items.filter(x=>x!==id);
   if(F.pelicanContents) delete F.pelicanContents[id];
   if(F.pelicanReturnIssues) delete F.pelicanReturnIssues[id];
-  const partner=getPartner(id);
-  if(partner) F.items=F.items.filter(x=>x!==partner);
+  kitFamily(id).forEach(p=>{ F.items=F.items.filter(x=>x!==p); });
 }
 
 // ── תוכן פליקן (רחפנים בפנים) ──
@@ -1446,7 +1460,7 @@ function toggleItem(id){
     removeFromSelection(id);
   }
   else addToSelection(id);
-  [id, getPartner(id)].filter(Boolean).forEach(x=>{
+  [id, ...kitFamily(id)].filter(Boolean).forEach(x=>{
     const cb=document.getElementById('cb-'+x);
     if(cb){
       const on=F.items.includes(x);
@@ -1645,10 +1659,11 @@ function doSubmit(btn){
     const allReturnIds=[...F.items];
     if(F.action==='return'){
       F.items.forEach(id=>{
-        const partner=getPartner(id);
-        if(partner&&db.items[partner]&&(db.items[partner].status==='out'||db.items[partner].status==='fault')&&!allReturnIds.includes(partner)){
-          allReturnIds.push(partner);
-        }
+        kitFamily(id).forEach(partner=>{
+          if(db.items[partner]&&(db.items[partner].status==='out'||db.items[partner].status==='fault')&&!allReturnIds.includes(partner)){
+            allReturnIds.push(partner);
+          }
+        });
       });
     }
     allReturnIds.forEach(id=>{
