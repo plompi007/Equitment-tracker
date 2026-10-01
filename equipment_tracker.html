@@ -834,8 +834,14 @@ const SET_PAIRS = {
   // flycart
   'flycart-13':'שלט-flycart-13',
 };
-// הפוך — שלט → רחפן
+// הפוך — שלט → רחפן (כשלשלט כמה רחפנים, למשל רחפן ספייר, נשמר רק אחד — ראו SET_PAIRS_REV_ALL)
 const SET_PAIRS_REV = Object.fromEntries(Object.entries(SET_PAIRS).map(([k,v])=>[v,k]));
+// הפוך מלא — שלט → כל הרחפנים המשויכים אליו (ערכות עם רחפן ספייר יש להן יותר מרחפן אחד לאותו שלט)
+const SET_PAIRS_REV_ALL = {};
+Object.entries(SET_PAIRS).forEach(([drone,ctrl])=>{
+  if(!SET_PAIRS_REV_ALL[ctrl]) SET_PAIRS_REV_ALL[ctrl]=[];
+  SET_PAIRS_REV_ALL[ctrl].push(drone);
+});
 
 function getPartner(id){
   if(SET_PAIRS[id] || SET_PAIRS_REV[id]) return SET_PAIRS[id] || SET_PAIRS_REV[id];
@@ -843,20 +849,20 @@ function getPartner(id){
   if(id.indexOf('משק-')===0) return 'שלט-אווטה-'+id.slice(4);
   return null;
 }
-// כל "משפחת הערכה" של פריט (שלט+משקף+רחפן) חוץ מעצמו — רחפן אווטה לא יוצא/חוזר בלי השלט והמשקף שלו
+// כל "משפחת הערכה" של פריט (שלט+משקף+רחפן, כולל רחפן ספייר אם יש) חוץ מעצמו — רחפן אווטה לא יוצא/חוזר בלי השלט והמשקף שלו
 function kitFamily(id){
-  let ctrl=null, drone=null, goggles=null;
-  if(SET_PAIRS[id]){ drone=id; ctrl=SET_PAIRS[id]; }
-  else if(SET_PAIRS_REV[id]){ ctrl=id; drone=SET_PAIRS_REV[id]; }
+  let ctrl=null, drones=[], goggles=null;
+  if(SET_PAIRS[id]){ drones=[id]; ctrl=SET_PAIRS[id]; }
+  else if(SET_PAIRS_REV[id]){ ctrl=id; }
   else if(id.indexOf('משק-')===0){ ctrl='שלט-אווטה-'+id.slice(4); goggles=id; }
   if(ctrl){
-    if(!drone) drone=SET_PAIRS_REV[ctrl]||null;
+    if(!drones.length) drones=SET_PAIRS_REV_ALL[ctrl]||[];
     if(!goggles){
       const m=ctrl.match(/^שלט-אווטה-(.+)$/);
       if(m) goggles='משק-'+m[1];
     }
   }
-  return [ctrl,drone,goggles].filter(x=>x&&x!==id);
+  return [ctrl,...drones,goggles].filter(x=>x&&x!==id);
 }
 
 function addToSelection(id){
