@@ -1898,6 +1898,48 @@ function isActualDroneItem(item){
   if(!isDispatchableDroneCat(item.cat)) return false;
   return !/^(מטען|שלט|בטריה|סוללה|כבל|מסך|תיק|מארז|מגן|קייס)/.test(item.id);
 }
+// דוח כל הציוד הצבאי (לא רק רחפנים) — בבסיס ובשטח יחד, בלי ציוד "לא מחויל"/שלטים מוסתרים — להעברה לגורם צבאי
+function showFullMilitaryInventoryReport(){
+  const RLM='‏';
+  const byCat={}, catOrder=[];
+  ITEMS.forEach(item=>{
+    if(NO_DISPATCH_CATS.has(item.cat) || PARTNER_CATS.has(item.cat)) return;
+    const s=db.items[item.id];
+    if(!s) return;
+    if(!byCat[item.cat]){ byCat[item.cat]=[]; catOrder.push(item.cat); }
+    byCat[item.cat].push(RLM+'• '+item.id);
+  });
+  const total = catOrder.reduce((n,c)=>n+byCat[c].length,0);
+  const el=document.getElementById('sheet-content');
+  if(total===0){
+    el.innerHTML=`
+      <div class="sheet-title">📋 דוח ציוד מלא</div>
+      <div style="text-align:center;color:var(--text3);padding:30px 0">אין ציוד להצגה</div>
+      <button class="back-btn" onclick="closeSheet()">סגור</button>
+    `;
+    document.getElementById('sheet-bg').classList.add('on');
+    return;
+  }
+  const dateStr = new Date().toLocaleDateString('he-IL');
+  const parts=[RLM+'📋 דוח ציוד מלא (בבסיס + בשטח) | '+dateStr, RLM+'סה"כ: '+total, ''];
+  catOrder.forEach(cat=>{
+    parts.push(RLM+'▸ '+cat+' ('+byCat[cat].length+'):');
+    parts.push(byCat[cat].join('\n'));
+    parts.push('');
+  });
+  const msg = parts.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+  const encoded = encodeURIComponent(msg);
+  const msgHtml = escapeHtml(msg).replace(/\n/g,'<br>');
+  el.innerHTML = `
+    <div class="sheet-title">📋 דוח ציוד מלא (${total})</div>
+    <div style="background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:12px;font-size:13px;line-height:1.8;white-space:pre-wrap;margin-bottom:16px;direction:rtl;max-height:50vh;overflow-y:auto">${msgHtml}</div>
+    <a href="https://wa.me/?text=${encoded}" target="_blank" style="display:block;width:100%;padding:14px;background:#25D366;color:#fff;border-radius:11px;font:700 15px/1 'Heebo',sans-serif;text-align:center;text-decoration:none;box-sizing:border-box;margin-bottom:8px">
+      📲 שלח לוואטסאפ
+    </a>
+    <button class="back-btn" onclick="closeSheet()">סגור</button>
+  `;
+  document.getElementById('sheet-bg').classList.add('on');
+}
 function showAvailableDronesReport(){
   const RLM='‏';
   const byCat={}, catOrder=[];
@@ -2378,6 +2420,8 @@ function renderTotal(){
 function renderManage(){
   const el=document.getElementById('manage-content');
   let html=`<div style="padding:12px">
+    <button onclick="showFullMilitaryInventoryReport()" style="width:100%;padding:12px;background:var(--accent);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer;margin-bottom:20px">📋 דוח ציוד מלא לחתימה (לגורם צבאי)</button>
+    <hr style="margin:0 0 20px;border:none;border-top:1px solid var(--border2)">
     <h3 style="margin-bottom:16px">הוספת פריט חדש</h3>
     <input id="item-name" placeholder="שם הפריט" style="width:100%;padding:8px;margin-bottom:10px;border:1px solid var(--border2);border-radius:6px">
     <input id="item-qty" type="number" placeholder="כמות" style="width:100%;padding:8px;margin-bottom:10px;border:1px solid var(--border2);border-radius:6px">
