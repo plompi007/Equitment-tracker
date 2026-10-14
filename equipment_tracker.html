@@ -1982,6 +1982,37 @@ function showAvailableDronesReport(){
   `;
   document.getElementById('sheet-bg').classList.add('on');
 }
+// רשימת רחפני 10" ללא התקן אלקטרו מכני מצומד — "לא בשימוש"/לא מבצעיים (ראו DEVICE_10IN_IDS)
+function showNotInUse10InReport(){
+  const RLM='‏';
+  const items = ITEMS.filter(item => item.cat==='רחפן עטלף 10"' && !DEVICE_10IN_IDS.has(item.id.replace('עטלף-','')));
+  const total = items.length;
+  const el=document.getElementById('sheet-content');
+  if(total===0){
+    el.innerHTML=`
+      <div class="sheet-title">🚫 רחפני 10" לא מבצעיים</div>
+      <div style="text-align:center;color:var(--text3);padding:30px 0">אין רחפנים כאלה כרגע</div>
+      <button class="back-btn" onclick="closeSheet()">סגור</button>
+    `;
+    document.getElementById('sheet-bg').classList.add('on');
+    return;
+  }
+  const dateStr = new Date().toLocaleDateString('he-IL');
+  const parts=[RLM+'🚫 רחפני 10" לא מבצעיים (ללא התקן אלקטרו מכני) | '+dateStr, RLM+'סה"כ: '+total, ''];
+  items.forEach(item=>parts.push(RLM+'• '+item.id));
+  const msg = parts.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+  const encoded = encodeURIComponent(msg);
+  const msgHtml = escapeHtml(msg).replace(/\n/g,'<br>');
+  el.innerHTML = `
+    <div class="sheet-title">🚫 רחפני 10" לא מבצעיים (${total})</div>
+    <div style="background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:12px;font-size:13px;line-height:1.8;white-space:pre-wrap;margin-bottom:16px;direction:rtl;max-height:50vh;overflow-y:auto">${msgHtml}</div>
+    <a href="https://wa.me/?text=${encoded}" target="_blank" style="display:block;width:100%;padding:14px;background:#25D366;color:#fff;border-radius:11px;font:700 15px/1 'Heebo',sans-serif;text-align:center;text-decoration:none;box-sizing:border-box;margin-bottom:8px">
+      📲 שלח לוואטסאפ
+    </a>
+    <button class="back-btn" onclick="closeSheet()">סגור</button>
+  `;
+  document.getElementById('sheet-bg').classList.add('on');
+}
 function showShareSheet(t, faultDesc, notes){
   const msg = buildWhatsappMsg(t, faultDesc, notes);
   const el = document.getElementById('sheet-content');
@@ -2421,7 +2452,8 @@ function renderTotal(){
 function renderManage(){
   const el=document.getElementById('manage-content');
   let html=`<div style="padding:12px">
-    <button onclick="showFullMilitaryInventoryReport()" style="width:100%;padding:12px;background:var(--accent);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer;margin-bottom:20px">📋 דוח ציוד מלא לחתימה (לגורם צבאי)</button>
+    <button onclick="showFullMilitaryInventoryReport()" style="width:100%;padding:12px;background:var(--accent);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer;margin-bottom:10px">📋 דוח ציוד מלא לחתימה (לגורם צבאי)</button>
+    <button onclick="showNotInUse10InReport()" style="width:100%;padding:12px;background:var(--text3);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer;margin-bottom:20px">🚫 רחפני 10" לא מבצעיים (ללא התקן)</button>
     <hr style="margin:0 0 20px;border:none;border-top:1px solid var(--border2)">
     <h3 style="margin-bottom:16px">הוספת פריט חדש</h3>
     <input id="item-name" placeholder="שם הפריט" style="width:100%;padding:8px;margin-bottom:10px;border:1px solid var(--border2);border-radius:6px">
