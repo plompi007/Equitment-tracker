@@ -1146,7 +1146,7 @@ function stepTransferFromItems(){
     const on=F.items.includes(item.id);
     const safeId=escId(item.id);
     html+=`<div class="check-item${on?' on':''}" onclick="toggleItem('${safeId}')">
-      <div class="check-box${on?' on':''}" id="cb-${safeId}"></div>
+      <div class="check-box${on?' on':''}" id="cb-${item.id}"></div>
       <div style="flex:1"><div class="check-lbl">${colorDotById(item.id)}${escapeHtml(item.displayId)}</div></div>
     </div>`;
   });
@@ -1332,7 +1332,7 @@ function stepItems(){
       }
       const safeId=escId(item.id);
       html+=`<div class="check-item${on?' on':''}" onclick="toggleItem('${safeId}')">
-        <div class="check-box${on?' on':''}" id="cb-${safeId}"></div>
+        <div class="check-box${on?' on':''}" id="cb-${item.id}"></div>
         <div style="flex:1"><div class="check-lbl">${colorDot(item)}${escapeHtml(item.id)}</div>${partnerLabel}</div>
       </div>`;
     });
@@ -1416,7 +1416,7 @@ function stepReturnItems(){
         const on=F.items.includes(item.id);
         const safeId=escId(item.id);
         html+=`<div class="check-item${on?' on':''}" onclick="toggleItem('${safeId}')">
-          <div class="check-box${on?' on':''}" id="cb-${safeId}"></div>
+          <div class="check-box${on?' on':''}" id="cb-${item.id}"></div>
           <div style="flex:1"><div class="check-lbl">${colorDotById(item.id)}${escapeHtml(item.displayId)}</div></div>
         </div>`;
       });
