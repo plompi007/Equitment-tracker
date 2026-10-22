@@ -657,6 +657,15 @@ const V2_DRONES=new Set(['M-2602','M-2758','M-2648']);
 function v2Tag(item){
   return V2_DRONES.has(item.id)?`<span style="font-size:9px;color:#fff;background:var(--accent);padding:1px 5px;border-radius:4px;margin-right:4px;font-weight:700">V2</span>`:'';
 }
+// רחפן אווטה בקטגוריה הגנרית ("רחפני אווטה") ששייך בפועל לערכה מסוימת כרחפן ספייר (יש לו שלט בטבלת SET_PAIRS ששייך לערכה)
+function spareKitTag(item){
+  if(item.cat!=='רחפני אווטה') return '';
+  const ctrl=SET_PAIRS[item.id];
+  if(!ctrl) return '';
+  const p=ITEMS.find(i=>i.id===ctrl);
+  if(!p||!/ערכה \d+$/.test(p.cat)) return '';
+  return `<span style="font-size:9px;color:var(--accent);background:var(--accent-dim);padding:1px 5px;border-radius:4px;margin-right:4px;font-weight:700">ספייר ${escapeHtml(p.cat)}</span>`;
+}
 // בטוח להטמעה בתוך onclick="...('X')" — גם עם ' וגם עם " בשם הפריט (כמו 5" / 10")
 function escId(s){
   return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
@@ -2072,7 +2081,7 @@ function renderInventory(){
       const row=document.createElement('div');
       row.className=`item-row ${isWorn?'fault':s.status}`;
       const contentsStr=(PELICAN_ITEMS.includes(item.id)&&s.contents&&s.contents.ids&&s.contents.ids.length)?` <span style="font-size:10px;color:var(--text3);font-weight:500">(${s.contents.ids.length} רחפנים בפנים)</span>`:'';
-      row.innerHTML=`<div class="item-id">${colorDot(item)}${escapeHtml(item.id)}${v2Tag(item)}${contentsStr}</div><div class="item-where">${notInUseTag(item)}${escapeHtml(s.where||'')}</div><div class="item-badge ${bc}">${sl}</div>`;
+      row.innerHTML=`<div class="item-id">${colorDot(item)}${escapeHtml(item.id)}${v2Tag(item)}${spareKitTag(item)}${contentsStr}</div><div class="item-where">${notInUseTag(item)}${escapeHtml(s.where||'')}</div><div class="item-badge ${bc}">${sl}</div>`;
       row.onclick=()=>{
         if(isWorn||s.status==='base'){
           // הצג תפריט קצר
