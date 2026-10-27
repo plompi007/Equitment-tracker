@@ -1527,6 +1527,12 @@ function setCond(c){
   if(ok) ok.className='cond-btn'+(c==='ok'?' ok-on':'');
   if(fa) fa.className='cond-btn'+(c==='fault'?' fault-on':'');
   if(ft) ft.className='fault-field'+(c==='fault'?' on':'');
+  const preview=document.getElementById('review-preview');
+  if(preview){
+    const t=now();
+    const msg=buildWhatsappMsg(t,'','');
+    preview.innerHTML=escapeHtml(msg).replace(/\*([^*]+)\*/g,'<b>$1</b>');
+  }
 }
 function openItemMenu(id){
   const s=db.items[id];
@@ -1646,8 +1652,16 @@ function stepReview(){
   const previewMsg=buildWhatsappMsg(t,'','');
   const msgHtml=escapeHtml(previewMsg).replace(/\*([^*]+)\*/g,'<b>$1</b>');
   const backStep=F.action==='dispatch'?(F.multiDest?3:2):F.action==='transfer'?3:1;
+  const condBlock = F.action==='dispatch' ? `
+  <div style="font-size:12px;color:var(--text3);margin-bottom:6px">מצב הציוד (אפשר לסמן תקול ועדיין להחתים — למשל יציאה למעבדה לתיקון)</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+    <button class="cond-btn${F.cond==='ok'?' ok-on':''}" id="c-ok" onclick="setCond('ok')">✓ תקין</button>
+    <button class="cond-btn${F.cond==='fault'?' fault-on':''}" id="c-fault" onclick="setCond('fault')">⚠ תקול</button>
+  </div>
+  <textarea class="notes fault-field${F.cond==='fault'?' on':''}" id="fault-text" placeholder="תיאור התקלה..."></textarea>` : '';
   return`<div class="sheet-title">בדוק לפני שליחה</div>
-  <div style="background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:12px;font-size:13px;line-height:1.8;white-space:pre-wrap;margin-bottom:14px;direction:rtl">${msgHtml}</div>
+  <div id="review-preview" style="background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:12px;font-size:13px;line-height:1.8;white-space:pre-wrap;margin-bottom:14px;direction:rtl">${msgHtml}</div>
+  ${condBlock}
   <textarea class="notes" id="notes-txt" placeholder="הערות (סוללות, ציוד נלווה...)"></textarea>
   <button class="next-btn" style="margin-top:10px" onclick="doSubmit(this)">✓ אשר ושלח</button>
   <button class="back-btn" onclick="step=${backStep};renderStep()">→ חזור לעריכה</button>`;
@@ -1655,6 +1669,7 @@ function stepReview(){
 function doSubmit(btn){
   const t=now();
   const notes=(document.getElementById('notes-txt')||{}).value||'';
+  const dispatchFaultDesc=(document.getElementById('fault-text')||{}).value||'';
   if(!db.log||!Array.isArray(db.log)) db.log=[];
   if(!db.items) db.items={};
   // שמור מיקום חדש בהיסטוריה
@@ -1719,7 +1734,7 @@ function doSubmit(btn){
       if(F.action==='dispatch'){
         const dest=(F.multiDest&&F.itemDest&&F.itemDest[id])?F.itemDest[id]:F.person;
         const contents=isPelican?(((F.pelicanContents&&F.pelicanContents[id])||(db.items[id]&&db.items[id].contents))||null):null;
-        db.items[id]={status:cond==='fault'?'fault':'out',where:dest,ts:t,notes:itemNotes,faultDesc:'',free:isFree,displayId,contents};
+        db.items[id]={status:cond==='fault'?'fault':'out',where:dest,ts:t,notes:itemNotes,faultDesc:cond==='fault'?dispatchFaultDesc:'',free:isFree,displayId,contents};
         db.log.unshift({id,action:'out',person:dest,cond,notes:itemNotes,ts:t,displayId});
         // הרחפנים שנארזו בפליקן — עדכן גם את הסטטוס שלהם עצמם
         if(isPelican&&contents&&contents.ids){
