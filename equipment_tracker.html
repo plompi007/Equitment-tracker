@@ -1293,10 +1293,26 @@ function stepItems(){
   <div style="font-size:11px;color:var(--accent);margin-bottom:12px;background:var(--accent-dim);padding:7px 10px;border-radius:8px;font-weight:600">סימון רחפן = שלט יוצא אוטומטית כסט</div>
   <div style="height:60px"></div>`;
 
+  // "בעיה ידועה" — רובריקה נפרדת למעלה: עדיין ניתן להחתים, רק שמוצג בנפרד כדי שיידעו על הבעיה לפני שמוציאים
+  const issueItems=ITEMS.filter(i=>!PARTNER_CATS.has(i.cat)&&!NO_DISPATCH_CATS.has(i.cat)&&db.items[i.id]&&db.items[i.id].status==='base'&&!db.items[i.id].worn&&db.items[i.id].knownIssue===true);
+  if(issueItems.length){
+    html+=`<div class="cat-check-hdr" style="background:var(--yellow-dim)"><span>⚠ ציוד עם בעיה ידועה (עדיין ניתן להחתים)</span></div><div class="check-grid">`;
+    issueItems.forEach(item=>{
+      const on=F.items.includes(item.id);
+      const safeId=escId(item.id);
+      const reason=(db.items[item.id]||{}).knownIssueReason||'';
+      html+=`<div class="check-item${on?' on':''}" onclick="toggleItem('${safeId}')">
+        <div class="check-box${on?' on':''}" id="cb-${item.id}"></div>
+        <div style="flex:1"><div class="check-lbl">${colorDot(item)}${escapeHtml(item.id)}</div>${reason?`<div class="check-sub" style="color:var(--yellow)">⚠ ${escapeHtml(reason)}</div>`:''}</div>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+
   // (הוסר: פריטים מותאמים אישית הוצגו קודם בבלוק נפרד למעלה בלי קשר לקטגוריה — עכשיו הם מוצגים בתוך הקטגוריה שלהם כמו כל פריט אחר)
 
   cats.forEach(cat=>{
-    const inCat=ITEMS.filter(i=>i.cat===cat&&db.items[i.id]&&db.items[i.id].status==='base'&&!db.items[i.id].worn);
+    const inCat=ITEMS.filter(i=>i.cat===cat&&db.items[i.id]&&db.items[i.id].status==='base'&&!db.items[i.id].worn&&db.items[i.id].knownIssue!==true);
     if(!inCat.length) return;
 
     // ערכה — הצג כפריט אחד עם אפשרות פתיחה
@@ -1537,16 +1553,25 @@ function setCond(c){
 function openItemMenu(id){
   const s=db.items[id];
   const isWorn=s.worn===true;
+  const hasIssue=s.knownIssue===true;
   const el=document.getElementById('sheet-content');
   el.innerHTML=`
     <div class="sheet-title">${escapeHtml(id)}</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:16px">${isWorn?'מסומן כבלאי — '+escapeHtml(s.wornReason||'ללא סיבה'):'בבסיס'}</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:16px">${isWorn?'מסומן כבלאי — '+escapeHtml(s.wornReason||'ללא סיבה'):hasIssue?'⚠ בעיה ידועה: '+escapeHtml(s.knownIssueReason||'')+' (עדיין ניתן להחתים)':'בבסיס'}</div>
     ${!isWorn?`<button class="next-btn" style="margin-bottom:8px" onclick="startFlow('${escId(id)}','dispatch')">↑ העמסה לשטח</button>`:''}
     ${!isWorn?`
     <span class="slabel">סיבת בלאי</span>
     <textarea class="notes" id="worn-reason" placeholder="תאר את הבעיה..." style="margin-bottom:8px"></textarea>
     <button class="next-btn" style="background:var(--red);margin-bottom:8px" onclick="markWorn('${escId(id)}')">✗ סמן כבלאי</button>
     `:`<button class="next-btn" style="background:var(--green);margin-bottom:8px" onclick="markOk('${escId(id)}')">✓ החזר לתקין</button>`}
+    ${!isWorn?`
+    <hr style="margin:14px 0;border:none;border-top:1px solid var(--border2)">
+    ${!hasIssue?`
+    <span class="slabel">בעיה ידועה (עדיין ניתן להחתים)</span>
+    <textarea class="notes" id="issue-reason" placeholder="תאר את הבעיה (לדוגמה: שריטה בזרוע, חור קטן)..." style="margin-bottom:8px"></textarea>
+    <button class="next-btn" style="background:var(--yellow);margin-bottom:8px" onclick="markKnownIssue('${escId(id)}')">⚠ סמן בעיה ידועה</button>
+    `:`<button class="next-btn" style="background:var(--green);margin-bottom:8px" onclick="clearKnownIssue('${escId(id)}')">✓ נקה בעיה ידועה</button>`}
+    `:''}
     <button class="back-btn" onclick="closeSheet()">סגור</button>
   `;
   document.getElementById('sheet-bg').classList.add('on');
@@ -1566,6 +1591,27 @@ function markOk(id){
   db.items[id].worn=false;
   db.items[id].wornReason='';
   save();renderAll();closeSheet();
+}
+
+// "בעיה ידועה" — בניגוד ל"בלאי", הפריט נשאר זמין לחתימה (לא מוסתר מרשימת ההעמסה)
+function markKnownIssue(id){
+  if(!db.items[id]) return;
+  const reason=(document.getElementById('issue-reason')||{}).value||'';
+  db.items[id].knownIssue=true;
+  db.items[id].knownIssueReason=reason;
+  save();renderAll();closeSheet();
+}
+
+function clearKnownIssue(id){
+  if(!db.items[id]) return;
+  db.items[id].knownIssue=false;
+  db.items[id].knownIssueReason='';
+  save();renderAll();closeSheet();
+}
+function knownIssueTag(item){
+  const s=db.items[item.id];
+  if(!s||s.knownIssue!==true) return '';
+  return `<span style="font-size:9px;color:#fff;background:var(--yellow);padding:1px 5px;border-radius:4px;margin-right:4px;font-weight:700">⚠ בעיה</span>`;
 }
 
 function stepAssignDest(){
@@ -2097,7 +2143,7 @@ function renderInventory(){
       const row=document.createElement('div');
       row.className=`item-row ${isWorn?'fault':s.status}`;
       const contentsStr=(PELICAN_ITEMS.includes(item.id)&&s.contents&&s.contents.ids&&s.contents.ids.length)?` <span style="font-size:10px;color:var(--text3);font-weight:500">(${s.contents.ids.length} רחפנים בפנים)</span>`:'';
-      row.innerHTML=`<div class="item-id">${colorDot(item)}${escapeHtml(item.id)}${v2Tag(item)}${spareKitTag(item)}${contentsStr}</div><div class="item-where">${notInUseTag(item)}${escapeHtml(s.where||'')}</div><div class="item-badge ${bc}">${sl}</div>`;
+      row.innerHTML=`<div class="item-id">${colorDot(item)}${escapeHtml(item.id)}${v2Tag(item)}${spareKitTag(item)}${knownIssueTag(item)}${contentsStr}</div><div class="item-where">${notInUseTag(item)}${escapeHtml(s.where||'')}</div><div class="item-badge ${bc}">${sl}</div>`;
       row.onclick=()=>{
         if(isWorn||s.status==='base'){
           // הצג תפריט קצר
